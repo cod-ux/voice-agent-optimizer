@@ -6,3 +6,5 @@ node_modules/
 .env.development
 .env.production
 .env.test
+
+ogPrompt.md
