@@ -2,7 +2,7 @@
 
 import { readFileSync } from "fs";
 import * as path from 'path';
-import OpenAI from "openai"
+import OpenAI from "openai";
 
 
 const feedbackFilePath = path.join(__dirname, "..", "inputs", "feedback.txt");
