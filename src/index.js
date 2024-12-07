@@ -49,14 +49,17 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const fs_1 = require("fs");
 const path = __importStar(require("path"));
 const openai_1 = __importDefault(require("openai"));
+require("dotenv/config");
 const feedbackFilePath = path.join(__dirname, "..", "inputs", "feedback.txt");
 const ogPromptFilePath = path.join(__dirname, "..", "inputs", "ogPrompt.md");
 const outputFilePath = path.join(__dirname, "outputs", "updatedPrompt.md");
 const changeLogPath = path.join(__dirname, "outputs", "changeLogs.txt");
 const feedback = (0, fs_1.readFileSync)(feedbackFilePath, 'utf-8');
 const ogPrompt = (0, fs_1.readFileSync)(ogPromptFilePath, 'utf-8');
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const GROQ_KEY = process.env.GROQ_KEY;
 const client = new openai_1.default({
-    apiKey: ""
+    apiKey: OPENAI_API_KEY,
 });
 function parsePrompt(prompt) {
     const segments = [];
@@ -130,15 +133,13 @@ function embedPhrase(segment) {
         const segmentContent = segment.content;
         const embeddingsObject = yield client.embeddings.create({
             model: "text-embedding-ada-002",
-            input: "",
+            input: segmentContent,
             encoding_format: 'float'
         });
         const embeddings = embeddingsObject.data[0].embedding;
         return embeddings;
     });
 }
-const embedding = embedPhrase(segmentList[1]);
-console.log("Embedding: ", embedding);
-// function to calculate cosine similarity for all the non-knowledgeBase non-tag phrases and return the top 5 most relevant phrases
+// function to calculate cosine similarity for all the non-knowledgeBase non-tag phrases
 // function to send llm request with feedback & original phrase, returning output phrase
 // function that iterates through top 5 sections, get response from llms and replace in segments list

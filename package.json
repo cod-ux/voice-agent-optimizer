@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@iarna/toml": "^2.2.5",
+    "dotenv": "^16.4.7",
     "openai": "^4.76.0"
   }
 }

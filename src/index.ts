@@ -3,6 +3,7 @@
 import { readFileSync } from "fs";
 import * as path from 'path';
 import OpenAI from "openai";
+import 'dotenv/config';
 
 
 const feedbackFilePath = path.join(__dirname, "..", "inputs", "feedback.txt");
@@ -12,9 +13,11 @@ const changeLogPath = path.join(__dirname, "outputs", "changeLogs.txt");
 
 const feedback = readFileSync(feedbackFilePath, 'utf-8');
 const ogPrompt = readFileSync(ogPromptFilePath, 'utf-8');
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const GROQ_KEY = process.env.GROQ_KEY;
 
 const client = new OpenAI({
-  apiKey: ""
+  apiKey: OPENAI_API_KEY,
 });
 
 // Step 2: Break down OG prompt into prompt sections
@@ -27,6 +30,8 @@ interface PromptSegment {
   content: string;
   isTag: boolean;
   isKnowledgeBase?: boolean;
+  score?: number;
+  embedding?: number[];
 }
 
 function parsePrompt(prompt: string): PromptSegment[] {
@@ -110,20 +115,28 @@ async function embedPhrase(segment: PromptSegment): Promise<number[]> {
 
   const embeddingsObject = await client.embeddings.create({
     model: "text-embedding-ada-002",
-    input: "",
+    input: segmentContent,
     encoding_format: 'float'
   });
 
   const embeddings: number[] = embeddingsObject.data[0].embedding;
 
   return embeddings;
+  
 }
 
-const embedding = embedPhrase(segmentList[1]);
 
-console.log("Embedding: ", embedding);
+// function to calculate cosine similarity for all the non-knowledgeBase non-tag phrases
 
-// function to calculate cosine similarity for all the non-knowledgeBase non-tag phrases and return the top 5 most relevant phrases
+function scoreSegments(segments: PromptSegment[]): PromptSegment[] {
+  
+}
+
+// function to take scores and return the top 5 most relevant segments
+
+function returnTopSegments(segments: PromptSegment[]): PromptSegment[] {
+
+}
 
 // function to send llm request with feedback & original phrase, returning output phrase
 
