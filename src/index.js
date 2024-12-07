@@ -33,15 +33,31 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const fs_1 = require("fs");
 const path = __importStar(require("path"));
+const openai_1 = __importDefault(require("openai"));
 const feedbackFilePath = path.join(__dirname, "..", "inputs", "feedback.txt");
 const ogPromptFilePath = path.join(__dirname, "..", "inputs", "ogPrompt.md");
 const outputFilePath = path.join(__dirname, "outputs", "updatedPrompt.md");
 const changeLogPath = path.join(__dirname, "outputs", "changeLogs.txt");
 const feedback = (0, fs_1.readFileSync)(feedbackFilePath, 'utf-8');
 const ogPrompt = (0, fs_1.readFileSync)(ogPromptFilePath, 'utf-8');
+const client = new openai_1.default({
+    apiKey: ""
+});
 function parsePrompt(prompt) {
     const segments = [];
     const lines = prompt.split('\n');
@@ -108,5 +124,21 @@ function parsePrompt(prompt) {
     return segments;
 }
 const segmentList = parsePrompt(ogPrompt);
-console.log("Length of segment list: ", segmentList.length);
-console.log(segmentList[31]);
+// function to convert a phrase to embedding - using openai embeddings
+function embedPhrase(segment) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const segmentContent = segment.content;
+        const embeddingsObject = yield client.embeddings.create({
+            model: "text-embedding-ada-002",
+            input: "",
+            encoding_format: 'float'
+        });
+        const embeddings = embeddingsObject.data[0].embedding;
+        return embeddings;
+    });
+}
+const embedding = embedPhrase(segmentList[1]);
+console.log("Embedding: ", embedding);
+// function to calculate cosine similarity for all the non-knowledgeBase non-tag phrases and return the top 5 most relevant phrases
+// function to send llm request with feedback & original phrase, returning output phrase
+// function that iterates through top 5 sections, get response from llms and replace in segments list

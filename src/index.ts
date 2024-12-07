@@ -2,6 +2,7 @@
 
 import { readFileSync } from "fs";
 import * as path from 'path';
+import OpenAI from "openai"
 
 
 const feedbackFilePath = path.join(__dirname, "..", "inputs", "feedback.txt");
@@ -11,6 +12,10 @@ const changeLogPath = path.join(__dirname, "outputs", "changeLogs.txt");
 
 const feedback = readFileSync(feedbackFilePath, 'utf-8');
 const ogPrompt = readFileSync(ogPromptFilePath, 'utf-8');
+
+const client = new OpenAI({
+  apiKey: ""
+});
 
 // Step 2: Break down OG prompt into prompt sections
 
@@ -98,5 +103,28 @@ function parsePrompt(prompt: string): PromptSegment[] {
 
 const segmentList = parsePrompt(ogPrompt);
 
-console.log("Length of segment list: ", segmentList.length);
-console.log(segmentList[31])
+// function to convert a phrase to embedding - using openai embeddings
+
+async function embedPhrase(segment: PromptSegment): Promise<number[]> {
+  const segmentContent: string = segment.content;
+
+  const embeddingsObject = await client.embeddings.create({
+    model: "text-embedding-ada-002",
+    input: "",
+    encoding_format: 'float'
+  });
+
+  const embeddings: number[] = embeddingsObject.data[0].embedding;
+
+  return embeddings;
+}
+
+const embedding = embedPhrase(segmentList[1]);
+
+console.log("Embedding: ", embedding);
+
+// function to calculate cosine similarity for all the non-knowledgeBase non-tag phrases and return the top 5 most relevant phrases
+
+// function to send llm request with feedback & original phrase, returning output phrase
+
+// function that iterates through top 5 sections, get response from llms and replace in segments list
