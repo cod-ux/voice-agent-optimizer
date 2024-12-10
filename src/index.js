@@ -52,7 +52,6 @@ const openai_1 = __importDefault(require("openai"));
 require("dotenv/config");
 const feedbackFilePath = path.join(__dirname, "..", "inputs", "feedback.txt");
 const ogPromptFilePath = path.join(__dirname, "..", "inputs", "ogPrompt.md");
-const outputFilePath = path.join(__dirname, "outputs", "updatedPrompt.md");
 const changeLogPath = path.join(__dirname, "outputs", "changeLogs.txt");
 const feedback = (0, fs_1.readFileSync)(feedbackFilePath, 'utf-8');
 const ogPrompt = (0, fs_1.readFileSync)(ogPromptFilePath, 'utf-8');
@@ -66,54 +65,34 @@ function parsePrompt(prompt) {
     const lines = prompt.split('\n');
     let currentContent = '';
     let inKnowledgeBase = false;
-    let kbStartIndex = -1;
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
-        // Start of KnowledgeBase
-        if (line.trim() === '<KnowledgeBase>' && !inKnowledgeBase) {
-            // Push any content before KnowledgeBase
+        // Handle tags
+        if (line.trim().match(/^<\/?[^>]+>$/)) {
+            // Push any accumulated content before handling the tag
             if (currentContent) {
                 segments.push({
                     content: currentContent,
-                    isTag: false
+                    isTag: false,
+                    isKnowledgeBase: inKnowledgeBase
                 });
                 currentContent = '';
             }
-            inKnowledgeBase = true;
-            kbStartIndex = i;
-            continue;
-        }
-        // End of KnowledgeBase
-        if (line.trim() === '</KnowledgeBase>' && inKnowledgeBase) {
-            // Get all content between KB tags, including the tags
-            const kbContent = lines.slice(kbStartIndex, i + 1).join('\n');
-            segments.push({
-                content: kbContent,
-                isTag: false,
-                isKnowledgeBase: true
-            });
-            inKnowledgeBase = false;
-            continue;
-        }
-        // Skip lines while in KnowledgeBase
-        if (inKnowledgeBase) {
-            continue;
-        }
-        // Handle regular tags and content
-        if (line.trim().match(/^<\/?[^>]+>$/)) {
-            if (currentContent) {
-                segments.push({
-                    content: currentContent,
-                    isTag: false
-                });
+            // Handle KnowledgeBase tags
+            if (line.trim() === '<KnowledgeBase>') {
+                inKnowledgeBase = true;
+            }
+            else if (line.trim() === '</KnowledgeBase>') {
+                inKnowledgeBase = false;
             }
             segments.push({
                 content: line.trim(),
-                isTag: true
+                isTag: true,
+                isKnowledgeBase: inKnowledgeBase
             });
-            currentContent = '';
         }
         else {
+            // Accumulate content
             currentContent += line + '\n';
         }
     }
@@ -121,14 +100,14 @@ function parsePrompt(prompt) {
     if (currentContent) {
         segments.push({
             content: currentContent,
-            isTag: false
+            isTag: false,
+            isKnowledgeBase: inKnowledgeBase
         });
     }
     return segments;
 }
-const segmentList = parsePrompt(ogPrompt);
 // function to convert a phrase to embedding - using openai embeddings
-function embedPhrase(segment) {
+function embedSegment(segment) {
     return __awaiter(this, void 0, void 0, function* () {
         const segmentContent = segment.content;
         const embeddingsObject = yield client.embeddings.create({
@@ -140,6 +119,178 @@ function embedPhrase(segment) {
         return embeddings;
     });
 }
-// function to calculate cosine similarity for all the non-knowledgeBase non-tag phrases
+function embedPhrase(phrase) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const embeddingsObject = yield client.embeddings.create({
+            model: "text-embedding-ada-002",
+            input: phrase,
+            encoding_format: 'float'
+        });
+        const embedding = embeddingsObject.data[0].embedding;
+        return embedding;
+    });
+}
+function cosineSimilarity(A, B) {
+    const dotProduct = A.reduce((sum, a, i) => sum + a * B[i], 0);
+    const magnitudeA = Math.sqrt(A.reduce((sum, a) => sum + a * a, 0));
+    const magnitudeB = Math.sqrt(B.reduce((sum, b) => sum + b * b, 0));
+    return dotProduct / (magnitudeA * magnitudeB);
+}
+// Return segments list with added embeddings
+function generateSegmentList(prompt, feedbackString) {
+    return __awaiter(this, void 0, void 0, function* () {
+        // Pasrsing original prompt
+        console.log("Parsing original prompt...");
+        let segmentList = parsePrompt(prompt);
+        // Embed segment content
+        console.log("\nEmbedding segment contents...");
+        for (let i = 0; i < segmentList.length; i++) {
+            const currentSegment = segmentList[i];
+            if (!currentSegment.isTag && !currentSegment.isKnowledgeBase) {
+                console.log(` -> Processing Segment: ${i + 1}/${segmentList.length}`);
+                currentSegment.embedding = yield embedSegment(currentSegment);
+                segmentList[i] = currentSegment;
+            }
+        }
+        // Scoring prompt segments
+        console.log("\nScoring prompt segments...");
+        const feedbackEmbedding = yield embedPhrase(feedbackString);
+        for (let i = 0; i < segmentList.length; i++) {
+            const promptSegment = segmentList[i];
+            if (promptSegment.embedding) {
+                const segmentEmbedding = promptSegment.embedding;
+                if (segmentEmbedding) {
+                    const segmentScore = cosineSimilarity(segmentEmbedding, feedbackEmbedding);
+                    promptSegment.score = segmentScore;
+                    segmentList[i] = promptSegment;
+                }
+            }
+        }
+        // Print the no of segments in segment list that aren't tags
+        const contentSegments = segmentList.filter(segment => !segment.isTag);
+        console.log("No. of content segments: ", contentSegments.length);
+        return segmentList;
+    });
+}
+function submain(prompt, feedbackString) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const sysPromptFilePath = path.join(__dirname, "..", "inputs", "sysPrompt.md");
+        const userPromptFilePath = path.join(__dirname, "..", "inputs", "userPrompt.md");
+        const summaryPromptFilePath = path.join(__dirname, "..", "inputs", "summaryPrompt.md");
+        const changelogPromptFilePath = path.join(__dirname, "..", "inputs", "changelogPrompt.md");
+        const outputFilePath = path.join(__dirname, "outputs", "updatedPrompt.md");
+        const changeLogPath = path.join(__dirname, "outputs", "changeLog.md");
+        const systemPrompt = (0, fs_1.readFileSync)(sysPromptFilePath, 'utf-8');
+        let userPrompt = (0, fs_1.readFileSync)(userPromptFilePath, 'utf-8');
+        const summaryPrompt = (0, fs_1.readFileSync)(summaryPromptFilePath, 'utf-8');
+        const changelogPrompt = (0, fs_1.readFileSync)(changelogPromptFilePath, 'utf-8');
+        // Initialize changelog string
+        let changelog = '';
+        // Generate context summary first
+        console.log("Generating context summary...");
+        const filledSummaryPrompt = summaryPrompt
+            .replace('{feedback}', feedbackString)
+            .replace('{original_prompt}', prompt);
+        let contextSummary = '';
+        try {
+            const summaryCompletion = yield client.chat.completions.create({
+                model: "gpt-4o",
+                messages: [
+                    { role: "user", content: filledSummaryPrompt }
+                ]
+            });
+            contextSummary = summaryCompletion.choices[0].message.content || '';
+            console.log("Context summary generated successfully");
+            console.log("Context summary: ", contextSummary);
+        }
+        catch (error) {
+            console.error("Error generating context summary:", error);
+            contextSummary = "Error generating context summary";
+        }
+        // Parse original prompt and get embeddings/scores
+        console.log("Parsing and scoring prompt segments...");
+        let segmentList = yield generateSegmentList(prompt, feedbackString);
+        let topSegments = getTopSegments(segmentList);
+        let updatedPrompt = '';
+        // Update prompts with context
+        const systemPromptWithContext = systemPrompt.replace('{context_summary}', contextSummary);
+        const userPromptWithContext = userPrompt.replace('{context_summary}', contextSummary);
+        // Create a Set of top segment contents for quick lookup
+        const topSegmentContents = new Set(topSegments.map(seg => seg.content));
+        for (let i = 0; i < segmentList.length; i++) {
+            const segment = segmentList[i];
+            // Always preserve tags and empty segments
+            if (segment.isTag || !segment.content.trim()) {
+                updatedPrompt += segment.content + '\n';
+                continue;
+            }
+            // Process if it's in top segments (including KB sections)
+            if (topSegmentContents.has(segment.content)) {
+                console.log(`Processing high-relevance segment ${i + 1}/${segmentList.length}`);
+                const filledUserPrompt = userPromptWithContext
+                    .replace('{feedback}', feedbackString)
+                    .replace('{section}', segment.content);
+                try {
+                    const completion = yield client.chat.completions.create({
+                        model: "gpt-4o",
+                        messages: [
+                            { role: "system", content: systemPromptWithContext },
+                            { role: "user", content: filledUserPrompt }
+                        ]
+                    });
+                    const editedContent = completion.choices[0].message.content || segment.content;
+                    updatedPrompt += editedContent + '\n';
+                    // Generate changelog entry for this segment
+                    const filledChangelogPrompt = changelogPrompt
+                        .replace('{feedback}', feedbackString)
+                        .replace('{original_prompt}', segment.content)
+                        .replace('{updated_prompt}', editedContent);
+                    try {
+                        const changelogCompletion = yield client.chat.completions.create({
+                            model: "gpt-4o",
+                            messages: [
+                                { role: "user", content: filledChangelogPrompt }
+                            ]
+                        });
+                        changelog += changelogCompletion.choices[0].message.content + '\n\n-----------------------------------\n\n';
+                    }
+                    catch (error) {
+                        console.error("Error generating changelog for segment:", error);
+                        changelog += `Failed to generate changelog for segment ${i + 1}\n\n-----------------------------------\n\n`;
+                    }
+                }
+                catch (error) {
+                    console.error(`Error processing segment ${i + 1}:`, error);
+                    updatedPrompt += segment.content + '\n';
+                    changelog += `Failed to process segment ${i + 1}\n\n-----------------------------------\n\n`;
+                }
+            }
+            else {
+                // Keep original content for non-top segments
+                updatedPrompt += segment.content + '\n';
+            }
+        }
+        // Write changelog to file
+        (0, fs_1.writeFileSync)(changeLogPath, changelog, 'utf-8');
+        console.log("Change log written to:", changeLogPath);
+        // Write updated prompt to file
+        (0, fs_1.writeFileSync)(outputFilePath, updatedPrompt, 'utf-8');
+        console.log("Updated prompt written to:", outputFilePath);
+        return updatedPrompt;
+    });
+}
+submain(ogPrompt, feedback);
+// function to take scores and return the top 5 most relevant segments
+function getTopSegments(segments) {
+    // Sort segments by score in descending order
+    const sortedSegments = [...segments].sort((a, b) => {
+        // Handle undefined scores by treating them as 0
+        const scoreA = a.score || 0;
+        const scoreB = b.score || 0;
+        return scoreB - scoreA;
+    });
+    // Return top 10 segments, or all segments if less than 10
+    return sortedSegments.slice(0, 10);
+}
 // function to send llm request with feedback & original phrase, returning output phrase
 // function that iterates through top 5 sections, get response from llms and replace in segments list
