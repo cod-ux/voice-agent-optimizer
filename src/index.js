@@ -52,13 +52,19 @@ const openai_1 = __importDefault(require("openai"));
 require("dotenv/config");
 const feedbackFilePath = path.join(__dirname, "..", "inputs", "feedback.txt");
 const ogPromptFilePath = path.join(__dirname, "..", "inputs", "ogPrompt.md");
-const chooseSegmentsFilePath = path.join(__dirname, "..", "inputs", "chooseSegments.md");
+const binaryFilteringFilePath = path.join(__dirname, "..", "inputs", "binaryFiltering.md");
+const createIndexTreeFilePath = path.join(__dirname, "..", "prompts", "createIndexTree.md");
 const changeLogPath = path.join(__dirname, "outputs", "changeLogs.txt");
 const feedback = (0, fs_1.readFileSync)(feedbackFilePath, 'utf-8');
 const ogPrompt = (0, fs_1.readFileSync)(ogPromptFilePath, 'utf-8');
-const chooseSegmentsPrompt = (0, fs_1.readFileSync)(chooseSegmentsFilePath, 'utf-8');
+const binaryFilteringPrompt = (0, fs_1.readFileSync)(binaryFilteringFilePath, 'utf-8');
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_KEY;
 const GROQ_KEY = process.env.GROQ_KEY;
+const DS_client = new openai_1.default({
+    baseURL: "https://api.deepseek.com",
+    apiKey: DEEPSEEK_API_KEY,
+});
 const client = new openai_1.default({
     apiKey: OPENAI_API_KEY,
 });
@@ -283,42 +289,35 @@ function submain(prompt, feedbackString) {
     });
 }
 // submain(ogPrompt, feedback);
-function test() {
-    return __awaiter(this, void 0, void 0, function* () {
-        let segmentsList = parsePrompt(ogPrompt);
-        let filteredList = yield filterSegments(segmentsList);
-        console.log(filteredList);
-        console.log("Length: ", filteredList.length);
-    });
-}
-test();
 function filterSegments(segments) {
     return __awaiter(this, void 0, void 0, function* () {
         // TODO: implement this function
         console.log("Getting top segments with LLMs...");
         let filteredSegments = [];
         for (let i = 0; i < segments.length; i++) {
-            console.log(` -> Processing Segment: ${i + 1}/${segments.length}`);
             const segment = segments[i];
-            const chooseSegmentsPlusContext = chooseSegmentsPrompt
-                .replace('{section}', segment.content)
-                .replace('{ogPrompt}', ogPrompt)
-                .replace('{feedback}', feedback);
-            try {
-                const completion = yield client.chat.completions.create({
-                    model: "gpt-4o",
-                    messages: [
-                        { role: "user", content: chooseSegmentsPlusContext }
-                    ]
-                });
-                console.log(completion.choices[0].message.content);
-                let response = completion.choices[0].message.content;
-                if ((response === null || response === void 0 ? void 0 : response.trim()) === "1") {
-                    filteredSegments.push(segment);
+            if (!segment.isTag && !segment.isKnowledgeBase) {
+                console.log(` -> Processing Segment: ${i + 1}/${segments.length}`);
+                const chooseSegmentsPlusContext = binaryFilteringPrompt
+                    .replace('{section}', segment.content)
+                    .replace('{ogPrompt}', ogPrompt)
+                    .replace('{feedback}', feedback);
+                try {
+                    const completion = yield DS_client.chat.completions.create({
+                        model: "deepseek-reasoner",
+                        messages: [
+                            { role: "user", content: chooseSegmentsPlusContext }
+                        ]
+                    });
+                    console.log(completion.choices[0].message.content);
+                    let response = completion.choices[0].message.content;
+                    if ((response === null || response === void 0 ? void 0 : response.trim()) === "1") {
+                        filteredSegments.push(segment);
+                    }
                 }
-            }
-            catch (error) {
-                console.error(`Error processing segment ${i + 1}:`, error);
+                catch (error) {
+                    console.error(`Error processing segment ${i + 1}:`, error);
+                }
             }
         }
         return filteredSegments;
@@ -334,7 +333,58 @@ function getTopSegments(segments) {
         return scoreB - scoreA;
     });
     // Return top 10 segments, or all segments if less than 10
-    return sortedSegments.slice(0, 10);
+    return sortedSegments.slice(0, 5);
 }
-// function to send llm request with feedback & original phrase, returning output phrase
-// function that iterates through top 5 sections, get response from llms and replace in segments list
+function binaryFiltering() {
+    return __awaiter(this, void 0, void 0, function* () {
+        let segmentsList = parsePrompt(ogPrompt);
+        let filteredList = yield filterSegments(segmentsList);
+        console.log(filteredList);
+        console.log("Length: ", filteredList.length);
+    });
+}
+// function to score segments and return the top 2 most relevant segments
+function semSimilarityFiltering() {
+    return __awaiter(this, void 0, void 0, function* () {
+        let segmentsList = yield generateSegmentList(ogPrompt, feedback);
+        let topSegments = getTopSegments(segmentsList);
+        console.log(topSegments);
+    });
+}
+// function to add line numbers to ogPrompt
+function addLineNumberToOgPrompt(ogPrompt) {
+    // split ogPrompt into lines
+    const lines = ogPrompt.split('\n');
+    // add line number as 'line 1: ' to each line in ogPrompt
+    const ogPromptWithLineNumbers = lines.map((line, i) => `line ${i + 1}: ${line}`).join('\n');
+    return ogPromptWithLineNumbers;
+}
+// test to create Index tree with line ranges
+function createIndexTree() {
+    return __awaiter(this, void 0, void 0, function* () {
+        console.log("Step 1: Adding line numbers to ogPrompt");
+        // step 1: add line numbers to ogprompt
+        // add line number as 'line 1: ' to each line in ogPrompt
+        let ogPromptWithLineNumbers = addLineNumberToOgPrompt(ogPrompt);
+        console.log("Step 2: Sending to LLM to create hierarchical tree with line ranges");
+        // step 2: send to llm and make hierarchical tree with line ranges
+        const createIndexTreePrompt = (0, fs_1.readFileSync)(createIndexTreeFilePath, 'utf-8');
+        const filledCreateIndexTreePrompt = createIndexTreePrompt.replace('{ogPrompt}', ogPromptWithLineNumbers);
+        const indexTreeBuffer = yield DS_client.chat.completions.create({
+            model: "deepseek-reasoner",
+            messages: [
+                { role: "user", content: filledCreateIndexTreePrompt }
+            ]
+        });
+        const indexTree = indexTreeBuffer.choices[0].message.content;
+        console.log("Step 3: Saving indexTree to file");
+        // step 3: create indexTree.md
+        if (!indexTree) {
+            throw new Error("Invalid response from LLM: Missing content.");
+        }
+        // save the index tree to src/outputs
+        let indexTreePath = path.join(__dirname, "outputs", "indexTree.md");
+        (0, fs_1.writeFileSync)(indexTreePath, indexTree);
+    });
+}
+createIndexTree();

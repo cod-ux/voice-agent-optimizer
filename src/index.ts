@@ -8,15 +8,23 @@ import 'dotenv/config';
 
 const feedbackFilePath = path.join(__dirname, "..", "inputs", "feedback.txt");
 const ogPromptFilePath = path.join(__dirname, "..", "inputs", "ogPrompt.md");
-const chooseSegmentsFilePath = path.join(__dirname, "..", "inputs", "chooseSegments.md");
+const binaryFilteringFilePath = path.join(__dirname, "..", "inputs", "binaryFiltering.md");
+const createIndexTreeFilePath = path.join(__dirname, "..", "prompts", "createIndexTree.md");
 
 const changeLogPath = path.join(__dirname, "outputs", "changeLogs.txt");
 
 const feedback = readFileSync(feedbackFilePath, 'utf-8');
 const ogPrompt = readFileSync(ogPromptFilePath, 'utf-8');
-const chooseSegmentsPrompt = readFileSync(chooseSegmentsFilePath, 'utf-8');
+const binaryFilteringPrompt = readFileSync(binaryFilteringFilePath, 'utf-8');
+
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_KEY;
 const GROQ_KEY = process.env.GROQ_KEY;
+
+const DS_client = new OpenAI({
+  baseURL: "https://api.deepseek.com",
+  apiKey: DEEPSEEK_API_KEY,
+});
 
 const client = new OpenAI({
   apiKey: OPENAI_API_KEY,
@@ -297,45 +305,39 @@ async function submain(prompt: string, feedbackString: string): Promise<string> 
 }
 
 // submain(ogPrompt, feedback);
-async function test () {
-let segmentsList = parsePrompt(ogPrompt);
-let filteredList = await filterSegments(segmentsList);
-console.log(filteredList);
-console.log("Length: ", filteredList.length);
-}
-
-test()
 
 async function filterSegments(segments: PromptSegment[]): Promise<PromptSegment[]> {
   // TODO: implement this function
   console.log("Getting top segments with LLMs...");
   let filteredSegments = [];
   for (let i = 0; i < segments.length; i++) {
-    console.log(` -> Processing Segment: ${i + 1}/${segments.length}`);
     const segment = segments[i];
-    const chooseSegmentsPlusContext = chooseSegmentsPrompt
-      .replace('{section}', segment.content)
-      .replace('{ogPrompt}', ogPrompt)
-      .replace('{feedback}', feedback);
-    
-    try {
-      const completion = await client.chat.completions.create({
-        model: "gpt-4o",
-        messages: [
-          { role: "user", content: chooseSegmentsPlusContext }
-        ]
-      });
-      console.log(completion.choices[0].message.content);
-      let response = completion.choices[0].message.content;
-      if (response?.trim() === "1") {
-        filteredSegments.push(segment);
+    if (!segment.isTag && !segment.isKnowledgeBase) {
+      console.log(` -> Processing Segment: ${i + 1}/${segments.length}`);
+      const chooseSegmentsPlusContext = binaryFilteringPrompt
+        .replace('{section}', segment.content)
+        .replace('{ogPrompt}', ogPrompt)
+        .replace('{feedback}', feedback);
+      
+      try {
+        const completion = await DS_client.chat.completions.create({
+          model: "deepseek-reasoner",
+          messages: [
+            { role: "user", content: chooseSegmentsPlusContext }
+          ]
+        });
+        console.log(completion.choices[0].message.content);
+        let response = completion.choices[0].message.content;
+        if (response?.trim() === "1") {
+          filteredSegments.push(segment);
+        }
+      } catch (error) {
+        console.error(`Error processing segment ${i + 1}:`, error);
       }
-    } catch (error) {
-      console.error(`Error processing segment ${i + 1}:`, error);
-    }
-                                                         
+    }                                                   
   }
   return filteredSegments;
+
 }
 
 // function to take scores and return the top 5 most relevant segments
@@ -350,10 +352,64 @@ function getTopSegments(segments: PromptSegment[]): PromptSegment[] {
   });
 
   // Return top 10 segments, or all segments if less than 10
-  return sortedSegments.slice(0, 10);
+  return sortedSegments.slice(0, 5);
 }
 
-// function to send llm request with feedback & original phrase, returning output phrase
+async function binaryFiltering () {
+  let segmentsList = parsePrompt(ogPrompt);
+  let filteredList = await filterSegments(segmentsList);
+  console.log(filteredList);
+  console.log("Length: ", filteredList.length);
+}
 
-// function that iterates through top 5 sections, get response from llms and replace in segments list
+// function to score segments and return the top 2 most relevant segments
+async function semSimilarityFiltering() {
+  let segmentsList = await generateSegmentList(ogPrompt, feedback);
+  let topSegments = getTopSegments(segmentsList);
 
+  console.log(topSegments);
+}
+
+// function to add line numbers to ogPrompt
+function addLineNumberToOgPrompt(ogPrompt: string) {
+  // split ogPrompt into lines
+  const lines = ogPrompt.split('\n');
+  // add line number as 'line 1: ' to each line in ogPrompt
+  const ogPromptWithLineNumbers = lines.map((line, i) => `line ${i+1}: ${line}`).join('\n');
+  return ogPromptWithLineNumbers;
+}
+
+// test to create Index tree with line ranges
+async function createIndexTree() {
+  console.log("Step 1: Adding line numbers to ogPrompt");
+  // step 1: add line numbers to ogprompt
+
+  // add line number as 'line 1: ' to each line in ogPrompt
+  let ogPromptWithLineNumbers = addLineNumberToOgPrompt(ogPrompt);
+
+  console.log("Step 2: Sending to LLM to create hierarchical tree with line ranges");
+  // step 2: send to llm and make hierarchical tree with line ranges
+  const createIndexTreePrompt = readFileSync(createIndexTreeFilePath, 'utf-8');
+  const filledCreateIndexTreePrompt = createIndexTreePrompt.replace('{ogPrompt}', ogPromptWithLineNumbers);
+  const indexTreeBuffer = await DS_client.chat.completions.create({
+    model: "deepseek-reasoner",
+    messages: [
+      { role: "user", content: filledCreateIndexTreePrompt }
+    ]
+  })
+
+  const indexTree = indexTreeBuffer.choices[0].message.content;
+
+  console.log("Step 3: Saving indexTree to file");
+  // step 3: create indexTree.md
+  if (!indexTree) {
+    throw new Error("Invalid response from LLM: Missing content.");
+  }
+
+  // save the index tree to src/outputs
+  let indexTreePath = path.join(__dirname, "outputs", "indexTree.md");
+  writeFileSync(indexTreePath, indexTree);
+
+}
+
+createIndexTree();

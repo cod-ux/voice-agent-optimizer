@@ -1,6 +1,1 @@
-Layer on additional discovery questions
-- What geographic locations are you looking for?
-- What are you looking for?
-  - Revenue Range?
-  - Personas you are targeting?
-  - What geographic locations are you looking for?
+Call Flow Section (Step 3)
