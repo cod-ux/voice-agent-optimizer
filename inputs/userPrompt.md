@@ -6,6 +6,12 @@ Rules:
 - If the section isn't relevant to the feedback, return it completely unchanged
 - Keep all original formatting and preserve existing typos unless making major logical changes
 
+Here is the full prompt:
+
+<OriginalPrompt>
+{ogPrompt}
+</OriginalPrompt>
+
 FEEDBACK:
 {feedback}
 

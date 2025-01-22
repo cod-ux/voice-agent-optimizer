@@ -8,11 +8,13 @@ import 'dotenv/config';
 
 const feedbackFilePath = path.join(__dirname, "..", "inputs", "feedback.txt");
 const ogPromptFilePath = path.join(__dirname, "..", "inputs", "ogPrompt.md");
+const chooseSegmentsFilePath = path.join(__dirname, "..", "inputs", "chooseSegments.md");
 
 const changeLogPath = path.join(__dirname, "outputs", "changeLogs.txt");
 
 const feedback = readFileSync(feedbackFilePath, 'utf-8');
 const ogPrompt = readFileSync(ogPromptFilePath, 'utf-8');
+const chooseSegmentsPrompt = readFileSync(chooseSegmentsFilePath, 'utf-8');
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const GROQ_KEY = process.env.GROQ_KEY;
 
@@ -191,7 +193,7 @@ async function submain(prompt: string, feedbackString: string): Promise<string> 
   console.log("Generating context summary...")
   const filledSummaryPrompt = summaryPrompt
     .replace('{feedback}', feedbackString)
-    .replace('{original_prompt}', prompt);
+    .replace('{original_prompt}', ogPrompt);
     
   let contextSummary = '';
   try {
@@ -217,7 +219,7 @@ async function submain(prompt: string, feedbackString: string): Promise<string> 
   
   // Update prompts with context
   const systemPromptWithContext = systemPrompt.replace('{context_summary}', contextSummary);
-  const userPromptWithContext = userPrompt.replace('{context_summary}', contextSummary);
+  const userPromptWithContext = userPrompt;
   
   // Create a Set of top segment contents for quick lookup
   const topSegmentContents = new Set(topSegments.map(seg => seg.content));
@@ -237,7 +239,8 @@ async function submain(prompt: string, feedbackString: string): Promise<string> 
       
       const filledUserPrompt = userPromptWithContext
         .replace('{feedback}', feedbackString)
-        .replace('{section}', segment.content);
+        .replace('{section}', segment.content)
+        .replace('{original_prompt}', ogPrompt);
         
       try {
         const completion = await client.chat.completions.create({
@@ -293,10 +296,47 @@ async function submain(prompt: string, feedbackString: string): Promise<string> 
   return updatedPrompt;
 }
 
-submain(ogPrompt, feedback);
+// submain(ogPrompt, feedback);
+async function test () {
+let segmentsList = parsePrompt(ogPrompt);
+let filteredList = await filterSegments(segmentsList);
+console.log(filteredList);
+console.log("Length: ", filteredList.length);
+}
 
+test()
 
-
+async function filterSegments(segments: PromptSegment[]): Promise<PromptSegment[]> {
+  // TODO: implement this function
+  console.log("Getting top segments with LLMs...");
+  let filteredSegments = [];
+  for (let i = 0; i < segments.length; i++) {
+    console.log(` -> Processing Segment: ${i + 1}/${segments.length}`);
+    const segment = segments[i];
+    const chooseSegmentsPlusContext = chooseSegmentsPrompt
+      .replace('{section}', segment.content)
+      .replace('{ogPrompt}', ogPrompt)
+      .replace('{feedback}', feedback);
+    
+    try {
+      const completion = await client.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          { role: "user", content: chooseSegmentsPlusContext }
+        ]
+      });
+      console.log(completion.choices[0].message.content);
+      let response = completion.choices[0].message.content;
+      if (response?.trim() === "1") {
+        filteredSegments.push(segment);
+      }
+    } catch (error) {
+      console.error(`Error processing segment ${i + 1}:`, error);
+    }
+                                                         
+  }
+  return filteredSegments;
+}
 
 // function to take scores and return the top 5 most relevant segments
 

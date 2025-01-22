@@ -52,9 +52,11 @@ const openai_1 = __importDefault(require("openai"));
 require("dotenv/config");
 const feedbackFilePath = path.join(__dirname, "..", "inputs", "feedback.txt");
 const ogPromptFilePath = path.join(__dirname, "..", "inputs", "ogPrompt.md");
+const chooseSegmentsFilePath = path.join(__dirname, "..", "inputs", "chooseSegments.md");
 const changeLogPath = path.join(__dirname, "outputs", "changeLogs.txt");
 const feedback = (0, fs_1.readFileSync)(feedbackFilePath, 'utf-8');
 const ogPrompt = (0, fs_1.readFileSync)(ogPromptFilePath, 'utf-8');
+const chooseSegmentsPrompt = (0, fs_1.readFileSync)(chooseSegmentsFilePath, 'utf-8');
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const GROQ_KEY = process.env.GROQ_KEY;
 const client = new openai_1.default({
@@ -190,7 +192,7 @@ function submain(prompt, feedbackString) {
         console.log("Generating context summary...");
         const filledSummaryPrompt = summaryPrompt
             .replace('{feedback}', feedbackString)
-            .replace('{original_prompt}', prompt);
+            .replace('{original_prompt}', ogPrompt);
         let contextSummary = '';
         try {
             const summaryCompletion = yield client.chat.completions.create({
@@ -214,7 +216,7 @@ function submain(prompt, feedbackString) {
         let updatedPrompt = '';
         // Update prompts with context
         const systemPromptWithContext = systemPrompt.replace('{context_summary}', contextSummary);
-        const userPromptWithContext = userPrompt.replace('{context_summary}', contextSummary);
+        const userPromptWithContext = userPrompt;
         // Create a Set of top segment contents for quick lookup
         const topSegmentContents = new Set(topSegments.map(seg => seg.content));
         for (let i = 0; i < segmentList.length; i++) {
@@ -229,7 +231,8 @@ function submain(prompt, feedbackString) {
                 console.log(`Processing high-relevance segment ${i + 1}/${segmentList.length}`);
                 const filledUserPrompt = userPromptWithContext
                     .replace('{feedback}', feedbackString)
-                    .replace('{section}', segment.content);
+                    .replace('{section}', segment.content)
+                    .replace('{original_prompt}', ogPrompt);
                 try {
                     const completion = yield client.chat.completions.create({
                         model: "gpt-4o",
@@ -279,7 +282,48 @@ function submain(prompt, feedbackString) {
         return updatedPrompt;
     });
 }
-submain(ogPrompt, feedback);
+// submain(ogPrompt, feedback);
+function test() {
+    return __awaiter(this, void 0, void 0, function* () {
+        let segmentsList = parsePrompt(ogPrompt);
+        let filteredList = yield filterSegments(segmentsList);
+        console.log(filteredList);
+        console.log("Length: ", filteredList.length);
+    });
+}
+test();
+function filterSegments(segments) {
+    return __awaiter(this, void 0, void 0, function* () {
+        // TODO: implement this function
+        console.log("Getting top segments with LLMs...");
+        let filteredSegments = [];
+        for (let i = 0; i < segments.length; i++) {
+            console.log(` -> Processing Segment: ${i + 1}/${segments.length}`);
+            const segment = segments[i];
+            const chooseSegmentsPlusContext = chooseSegmentsPrompt
+                .replace('{section}', segment.content)
+                .replace('{ogPrompt}', ogPrompt)
+                .replace('{feedback}', feedback);
+            try {
+                const completion = yield client.chat.completions.create({
+                    model: "gpt-4o",
+                    messages: [
+                        { role: "user", content: chooseSegmentsPlusContext }
+                    ]
+                });
+                console.log(completion.choices[0].message.content);
+                let response = completion.choices[0].message.content;
+                if ((response === null || response === void 0 ? void 0 : response.trim()) === "1") {
+                    filteredSegments.push(segment);
+                }
+            }
+            catch (error) {
+                console.error(`Error processing segment ${i + 1}:`, error);
+            }
+        }
+        return filteredSegments;
+    });
+}
 // function to take scores and return the top 5 most relevant segments
 function getTopSegments(segments) {
     // Sort segments by score in descending order
