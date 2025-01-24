@@ -12,6 +12,7 @@ const feedbackFilePath = path.join(__dirname, "..", "inputs", "feedback.txt");
 const ogPromptFilePath = path.join(__dirname, "..", "inputs", "ogPrompt.md");
 const binaryFilteringFilePath = path.join(__dirname, "..", "inputs", "binaryFiltering.md");
 const createIndexTreeFilePath = path.join(__dirname, "..", "prompts", "createIndexTree.md");
+const predictionPromptFilePath = path.join(__dirname, "..", "prompts", "predictionPrompt.md");
 
 const changeLogPath = path.join(__dirname, "outputs", "changeLogs.txt");
 
@@ -28,9 +29,23 @@ const DS_client = new OpenAI({
   apiKey: DEEPSEEK_API_KEY,
 });
 
+const GROQ_client = new OpenAI({
+  apiKey: GROQ_KEY,
+  baseURL: "https://api.groq.com/openai/v1"
+})
+
 const client = new OpenAI({
   apiKey: OPENAI_API_KEY,
 });
+
+const changeItemSchema = z.object({
+  sectionToEdit: z.string(),
+  changeInstructions: z.string(),
+})
+
+const changeListSchema = z.object({
+  changeListArray: z.array(changeItemSchema)
+})
 
 // Step 2: Break down OG prompt into prompt sections
 
@@ -357,6 +372,8 @@ function getTopSegments(segments: PromptSegment[]): PromptSegment[] {
   return sortedSegments.slice(0, 5);
 }
 
+
+
 async function binaryFiltering () {
   let segmentsList = parsePrompt(ogPrompt);
   let filteredList = await filterSegments(segmentsList);
@@ -381,6 +398,37 @@ function addLineNumberToOgPrompt(ogPrompt: string) {
   return ogPromptWithLineNumbers;
 }
 
+
+async function predictionCall() {
+  const predictionPrompt = readFileSync(predictionPromptFilePath, 'utf-8');
+  const filledPredictionPrompt = predictionPrompt.replace('{feedback}', feedback);
+  
+  const predictionBuffer = await client.chat.completions.create({
+    model: "gpt-4o",
+    messages: [
+      { role: "user", content: filledPredictionPrompt }
+    ],
+    store: true,
+    prediction: {
+      type: "content",
+      content: ogPrompt
+    }
+  })
+
+  const prediction = predictionBuffer.choices[0].message.content;
+  console.log("Step 4: Saving prediction to file");
+  // step 4: create prediction.md
+  if (!prediction) {
+    throw new Error("Invalid response from LLM: Missing content.");
+  }
+
+  console.log("Prediction: ", prediction);
+
+  let predictionPath = path.join(__dirname, "outputs", "prediction.md");
+  writeFileSync(predictionPath, prediction);
+}
+
+
 // test to create Index tree with line ranges
 async function createIndexTree() {
   console.log("Step 1: Adding line numbers to ogPrompt");
@@ -393,8 +441,8 @@ async function createIndexTree() {
   // step 2: send to llm and make hierarchical tree with line ranges
   const createIndexTreePrompt = readFileSync(createIndexTreeFilePath, 'utf-8');
   const filledCreateIndexTreePrompt = createIndexTreePrompt.replace('{ogPrompt}', ogPromptWithLineNumbers);
-  const indexTreeBuffer = await DS_client.chat.completions.create({
-    model: "deepseek-chat",
+  const indexTreeBuffer = await client.chat.completions.create({
+    model: "gpt-4o",
     messages: [
       { role: "user", content: filledCreateIndexTreePrompt }
     ]
@@ -414,6 +462,41 @@ async function createIndexTree() {
 
 }
 
-createIndexTree();
 
-// create list of change instructions
+
+// function to send ogPrompt, indexTree and feedback to openai to ask it to return a list of changes to make
+async function createChangeList() {
+  console.log("Step 1: Sending to LLM to create change log");
+  const indexTreeFilePath = path.join(__dirname, "outputs", "indexTree.md");
+  const indexTree = readFileSync(indexTreeFilePath, 'utf-8');
+
+  const createChangeListPromptFilePath = path.join(__dirname, "..", "prompts", "createChangeList.md");
+  const createChangeListPrompt = readFileSync(createChangeListPromptFilePath, 'utf-8');
+  const filledCreateChangeListPrompt = createChangeListPrompt.replace('{indexTree}', indexTree).replace('{feedback}', feedback).replace('{ogPrompt}', ogPrompt);
+
+  const changeListBuffer = await client.beta.chat.completions.parse({
+    model: "gpt-4o",
+    messages: [
+      { role: "user", content: filledCreateChangeListPrompt }
+    ],
+    response_format: zodResponseFormat(changeListSchema, "change_list")
+  })
+  const changeList = changeListBuffer.choices[0].message.parsed;
+  console.log("Step 2: Saving changeList to file");
+  // step 2: create changeList.md
+  if (!changeList) {
+    throw new Error("Invalid response from LLM: Missing content.");
+  }
+
+  const changeListText = JSON.stringify(changeList, null, 2);
+  let changeListPath = path.join(__dirname, "outputs", "changeList.md");
+  writeFileSync(changeListPath, changeListText);
+  console.log("Step 3: Done");
+}
+
+async function pipeline() {
+  // await createIndexTree();
+  await createChangeList();
+}
+
+pipeline();
