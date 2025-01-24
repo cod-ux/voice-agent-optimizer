@@ -4,6 +4,8 @@ import { readFileSync, writeFileSync } from "fs";
 import * as path from 'path';
 import OpenAI from "openai";
 import 'dotenv/config';
+import { zodResponseFormat } from "openai/helpers/zod";
+import {z} from "zod";
 
 
 const feedbackFilePath = path.join(__dirname, "..", "inputs", "feedback.txt");
@@ -392,7 +394,7 @@ async function createIndexTree() {
   const createIndexTreePrompt = readFileSync(createIndexTreeFilePath, 'utf-8');
   const filledCreateIndexTreePrompt = createIndexTreePrompt.replace('{ogPrompt}', ogPromptWithLineNumbers);
   const indexTreeBuffer = await DS_client.chat.completions.create({
-    model: "deepseek-reasoner",
+    model: "deepseek-chat",
     messages: [
       { role: "user", content: filledCreateIndexTreePrompt }
     ]
@@ -413,3 +415,5 @@ async function createIndexTree() {
 }
 
 createIndexTree();
+
+// create list of change instructions

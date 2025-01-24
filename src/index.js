@@ -371,7 +371,7 @@ function createIndexTree() {
         const createIndexTreePrompt = (0, fs_1.readFileSync)(createIndexTreeFilePath, 'utf-8');
         const filledCreateIndexTreePrompt = createIndexTreePrompt.replace('{ogPrompt}', ogPromptWithLineNumbers);
         const indexTreeBuffer = yield DS_client.chat.completions.create({
-            model: "deepseek-reasoner",
+            model: "deepseek-chat",
             messages: [
                 { role: "user", content: filledCreateIndexTreePrompt }
             ]
@@ -388,3 +388,4 @@ function createIndexTree() {
     });
 }
 createIndexTree();
+// create list of change instructions
