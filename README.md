@@ -1,3 +1,3 @@
 # voice-agent-optimizer
 
-A Typescript based prompt optimisation tool for voice agents
+AI prompt engineer for voice agents. Improves voice agent performance based on user feedback by iterating on prompts.
