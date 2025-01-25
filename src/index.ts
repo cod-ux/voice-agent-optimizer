@@ -494,8 +494,13 @@ async function createChangeList() {
   console.log("Step 3: Done");
 }
 
+async function impChanges() {
+  
+}
+
+
 async function pipeline() {
-  // await createIndexTree();
+  await createIndexTree();
   await createChangeList();
 }
 
