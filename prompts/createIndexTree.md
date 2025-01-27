@@ -2,7 +2,9 @@ I will provide an LLM-based voice agent’s prompt. You will create a hierarchic
 
 Example JSON Output:
 
-```
+<ExampleJSONFormat>
+```json
+[
 {
   "sectionName": "Root (OriginalPrompt)",
   "start": 1,
@@ -37,7 +39,9 @@ Example JSON Output:
     }
   ]
 }
+]
 ```
+</ExampleJSONFormat>
 
 Here is the original prompt:
 <OriginalPrompt>

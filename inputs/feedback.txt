@@ -1,1 +1,11 @@
-Add additional questions about their budget.
+- Still did not hang up at the end
+- Layer on additional discovery questions
+  - What geographic locations are you looking for?
+  - What are you looking for?
+  - Revenue Range?
+  - Personas you are targeting?
+  - What geographic locations are you looking for?
+- Would want to have AI use ZI data to personalize the questions
+- How many questions should AI ask before the customer gets annoyed?
+- Set the stage at the beginning of the call of what the AI is going to be asking (I want to learn about your process, ideal customers, etc.)
+Transition the call from discovery to getting the meeting set “From what you’ve shared, I think it would be great to get you in touch with one of our AEs to discuss how Zoominfo can support your business needs”

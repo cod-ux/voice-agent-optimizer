@@ -6,6 +6,7 @@ import OpenAI from "openai";
 import 'dotenv/config';
 import { zodResponseFormat } from "openai/helpers/zod";
 import {z} from "zod";
+import { JsonArray } from "@iarna/toml";
 
 
 const feedbackFilePath = path.join(__dirname, "..", "inputs", "feedback.txt");
@@ -452,13 +453,20 @@ async function createIndexTree() {
 
   console.log("Step 3: Saving indexTree to file");
   // step 3: create indexTree.md
+
+  // check if its json format and then save it
   if (!indexTree) {
     throw new Error("Invalid response from LLM: Missing content.");
   }
 
+  // extract json object between ```json and ``` characters
+  const startIndex = indexTree.indexOf('```json') + '```json'.length;
+  const endIndex = indexTree.indexOf('```', startIndex);
+  const indexTreeJsonString = indexTree.substring(startIndex, endIndex);
+
   // save the index tree to src/outputs
   let indexTreePath = path.join(__dirname, "outputs", "indexTree.md");
-  writeFileSync(indexTreePath, indexTree);
+  writeFileSync(indexTreePath, indexTreeJsonString);
 
 }
 
@@ -494,14 +502,185 @@ async function createChangeList() {
   console.log("Step 3: Done");
 }
 
-async function impChanges() {
+async function applyChanges() {
+  const changeListFilePath = path.join(__dirname, "outputs", "changeList.md");
+  const changeList = readFileSync(changeListFilePath, 'utf-8');
+
+  if (!changeList) {
+    throw new Error("Invalid response from LLM: Missing content.");
+  }
+
+  const changeListJson = JSON.parse(changeList);
+
+  const applyChangesPromptFilePath = path.join(__dirname, "..", "prompts", "applyChanges.md");
+  const applyChangesPrompt = readFileSync(applyChangesPromptFilePath, 'utf-8');
   
+  const changeListArray = changeListJson.changeListArray;
+
+  let ogPromptContent = readFileSync(ogPromptFilePath, 'utf-8');
+  const indexTreeFilePath = path.join(__dirname, "outputs", "indexTree.md");
+  const ogIndexTree = readFileSync(indexTreeFilePath, 'utf-8');
+  let successfulChangeCount = 0;
+
+  const updatedIndexTreeFilePath = path.join(__dirname, "outputs", "updatedIndexTree.md");
+  writeFileSync(updatedIndexTreeFilePath, ogIndexTree);
+
+
+  const updatedPromptFilePath = path.join(__dirname, "outputs", "updatedPrompt.md");
+  writeFileSync(updatedPromptFilePath, ogPromptContent);
+
+  for (let i=0; i<changeListArray.length; i++) {
+    const change = changeListArray[i];
+    const sectionToEdit = change.sectionToEdit;
+    const changeInstructions = change.changeInstructions;
+
+    const tempIndexTree = readFileSync(updatedIndexTreeFilePath, 'utf-8');
+    const tempPromptContent = readFileSync(updatedPromptFilePath, 'utf-8');
+
+    console.log(`Processing change ${i+1} of ${changeListArray.length} - Section: ${sectionToEdit}`);
+
+    const tempIndexTreeJson = JSON.parse(tempIndexTree);
+
+    const ogSectionRange: { start: number; end: number } | null = findLineRange(tempIndexTreeJson, sectionToEdit);
+    try {
+      if (!ogSectionRange) {
+        throw new Error("Invalid section name: " + sectionToEdit);
+      }
+    } catch (error) {
+      console.error(`Error in applyChanges: ${error}`);
+      continue;
+    }
+
+    console.log(`Section ${sectionToEdit} found at line range ${ogSectionRange.start}-${ogSectionRange.end}`);
+
+    
+
+    const tempPromptLines = tempPromptContent.split("\n");
+    const lineRangeArray = tempPromptLines.slice(ogSectionRange.start-1, ogSectionRange.end);
+    const sectionToEditContent = lineRangeArray.join("\n");
+
+    const filledImpChangesPrompt = applyChangesPrompt
+      .replace("{sectionName}", sectionToEdit)
+      .replace("{sectionContent}", sectionToEditContent)
+      .replace("{changeInstructions}", changeInstructions);
+
+    const updPromptSectionBuffer = await client.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        { role: "user", content: filledImpChangesPrompt }
+      ]
+    });
+
+    const newSectionContent: string | null = updPromptSectionBuffer.choices[0].message.content;
+    console.log(`-> New section content generated.`);
+
+    let newSectionRange: { start: number; end: number } | null;
+
+    if (newSectionContent) {
+      successfulChangeCount++;
+
+      const newSectionLength = newSectionContent.split("\n").length;
+      const oldSectionLength = ogSectionRange.end - ogSectionRange.start;
+      console.log(`New section length: ${newSectionLength}, Old section length: ${ogSectionRange.end - ogSectionRange.start}`);
+
+      const lineDiff: number = newSectionLength - oldSectionLength - 1;
+      console.log(`Line diff: ${lineDiff}`);
+
+      const newSectionRangeEnd = ogSectionRange.end + lineDiff;
+      newSectionRange = { start: ogSectionRange.start, end: newSectionRangeEnd };
+      console.log(`New section range: ${newSectionRange.start}-${newSectionRange.end}`);
+      
+
+      // function to add lineDiffToAdd to all the sections start and end in indexTreeJson.md
+      const updatedIndexTreeJson = updateIndexTree(tempIndexTreeJson, newSectionRange, sectionToEdit, lineDiff);
+      // write it to updatedindexTree.md
+      const updatedIndexTreeFilePath = path.join(__dirname, "outputs", "updatedIndexTree.md");
+      writeFileSync(updatedIndexTreeFilePath, JSON.stringify(updatedIndexTreeJson, null, 2));
+
+      const BeforeNewSectionLines: string[] = tempPromptLines.slice(0, ogSectionRange.start-1);
+      const AfterNewSectionLines: string[] = tempPromptLines.slice(ogSectionRange.end);
+      const NewSectionLines: string[] = newSectionContent.split("\n");
+      
+      const newPromptLines: string[] = [...BeforeNewSectionLines, ...NewSectionLines, ...AfterNewSectionLines];
+      const newPromptContent: string = newPromptLines.join("\n");
+
+      const newPromptFilePath = path.join(__dirname, "outputs", "updatedPrompt.md");
+      writeFileSync(newPromptFilePath, newPromptContent);
+    }
+  }
+
+}
+
+interface JsonNode {
+  sectionName: string;
+  start: number;
+  end: number;
+  xmlHeading: boolean;
+  children?: JsonNode[]; // Optional, since not all nodes have children
+}
+
+// function find line range with indexTreeJson, sectionToEdit
+function findLineRange(indexTreeJson: JsonNode[], sectionToEdit: string): { start: number; end: number } | null {
+  for (const section of indexTreeJson) {
+    if (section.sectionName === sectionToEdit) {
+      return { start: section.start, end: section.end };
+    }
+
+    if (section.children) {
+      const sectionRange = findLineRange(section.children, sectionToEdit);
+      if (sectionRange) {
+        return sectionRange;
+      }
+    }
+  }
+
+  return null;
+}
+
+function updateIndexTree(
+  indexTreeJson: JsonNode[],
+  newSectionRange: { start: number; end: number },
+  sectionToEdit: string,
+  lineDiff: number
+): JsonNode[] {
+  let foundStatus: boolean = false;
+
+  function updateTree(tree: JsonNode[], isBelowFound: boolean): JsonNode[] {
+    for (const section of tree) {
+      // Update the section if it matches the one to edit
+      if (!foundStatus && section.sectionName === sectionToEdit) {
+        section.start = newSectionRange.start;
+        section.end = newSectionRange.end;
+        foundStatus = true;
+        isBelowFound = true; // Update the flag since the section is now found
+        continue; // Skip further processing of this section
+      }
+
+      // If we are below the found section, adjust the start and end
+      if (isBelowFound) {
+        section.start += lineDiff;
+        section.end += lineDiff;
+      }
+
+      // Recursively process children
+      if (section.children) {
+        updateTree(section.children, isBelowFound);
+      }
+    }
+
+    return indexTreeJson;
+  }
+
+  const updatedIndexTreeJson = updateTree(indexTreeJson, false);
+  return updatedIndexTreeJson;
 }
 
 
 async function pipeline() {
   await createIndexTree();
   await createChangeList();
+  await applyChanges();
 }
 
 pipeline();
+

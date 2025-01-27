@@ -419,12 +419,17 @@ function createIndexTree() {
         const indexTree = indexTreeBuffer.choices[0].message.content;
         console.log("Step 3: Saving indexTree to file");
         // step 3: create indexTree.md
+        // check if its json format and then save it
         if (!indexTree) {
             throw new Error("Invalid response from LLM: Missing content.");
         }
+        // extract json object between ```json and ``` characters
+        const startIndex = indexTree.indexOf('```json') + '```json'.length;
+        const endIndex = indexTree.indexOf('```', startIndex);
+        const indexTreeJsonString = indexTree.substring(startIndex, endIndex);
         // save the index tree to src/outputs
         let indexTreePath = path.join(__dirname, "outputs", "indexTree.md");
-        (0, fs_1.writeFileSync)(indexTreePath, indexTree);
+        (0, fs_1.writeFileSync)(indexTreePath, indexTreeJsonString);
     });
 }
 // function to send ogPrompt, indexTree and feedback to openai to ask it to return a list of changes to make
@@ -455,10 +460,133 @@ function createChangeList() {
         console.log("Step 3: Done");
     });
 }
+function applyChanges() {
+    return __awaiter(this, void 0, void 0, function* () {
+        const changeListFilePath = path.join(__dirname, "outputs", "changeList.md");
+        const changeList = (0, fs_1.readFileSync)(changeListFilePath, 'utf-8');
+        if (!changeList) {
+            throw new Error("Invalid response from LLM: Missing content.");
+        }
+        const changeListJson = JSON.parse(changeList);
+        const applyChangesPromptFilePath = path.join(__dirname, "..", "prompts", "applyChanges.md");
+        const applyChangesPrompt = (0, fs_1.readFileSync)(applyChangesPromptFilePath, 'utf-8');
+        const changeListArray = changeListJson.changeListArray;
+        let ogPromptContent = (0, fs_1.readFileSync)(ogPromptFilePath, 'utf-8');
+        const indexTreeFilePath = path.join(__dirname, "outputs", "indexTree.md");
+        const ogIndexTree = (0, fs_1.readFileSync)(indexTreeFilePath, 'utf-8');
+        let successfulChangeCount = 0;
+        const updatedIndexTreeFilePath = path.join(__dirname, "outputs", "updatedIndexTree.md");
+        (0, fs_1.writeFileSync)(updatedIndexTreeFilePath, ogIndexTree);
+        const updatedPromptFilePath = path.join(__dirname, "outputs", "updatedPrompt.md");
+        (0, fs_1.writeFileSync)(updatedPromptFilePath, ogPromptContent);
+        for (let i = 0; i < changeListArray.length; i++) {
+            const change = changeListArray[i];
+            const sectionToEdit = change.sectionToEdit;
+            const changeInstructions = change.changeInstructions;
+            const tempIndexTree = (0, fs_1.readFileSync)(updatedIndexTreeFilePath, 'utf-8');
+            const tempPromptContent = (0, fs_1.readFileSync)(updatedPromptFilePath, 'utf-8');
+            console.log(`Processing change ${i + 1} of ${changeListArray.length} - Section: ${sectionToEdit}`);
+            const tempIndexTreeJson = JSON.parse(tempIndexTree);
+            const ogSectionRange = findLineRange(tempIndexTreeJson, sectionToEdit);
+            try {
+                if (!ogSectionRange) {
+                    throw new Error("Invalid section name: " + sectionToEdit);
+                }
+            }
+            catch (error) {
+                console.error(`Error in applyChanges: ${error}`);
+                continue;
+            }
+            console.log(`Section ${sectionToEdit} found at line range ${ogSectionRange.start}-${ogSectionRange.end}`);
+            const tempPromptLines = tempPromptContent.split("\n");
+            const lineRangeArray = tempPromptLines.slice(ogSectionRange.start - 1, ogSectionRange.end);
+            const sectionToEditContent = lineRangeArray.join("\n");
+            const filledImpChangesPrompt = applyChangesPrompt
+                .replace("{sectionName}", sectionToEdit)
+                .replace("{sectionContent}", sectionToEditContent)
+                .replace("{changeInstructions}", changeInstructions);
+            const updPromptSectionBuffer = yield client.chat.completions.create({
+                model: "gpt-4o",
+                messages: [
+                    { role: "user", content: filledImpChangesPrompt }
+                ]
+            });
+            const newSectionContent = updPromptSectionBuffer.choices[0].message.content;
+            console.log(`-> New section content generated.`);
+            let newSectionRange;
+            if (newSectionContent) {
+                successfulChangeCount++;
+                const newSectionLength = newSectionContent.split("\n").length;
+                const oldSectionLength = ogSectionRange.end - ogSectionRange.start;
+                console.log(`New section length: ${newSectionLength}, Old section length: ${ogSectionRange.end - ogSectionRange.start}`);
+                const lineDiff = newSectionLength - oldSectionLength - 1;
+                console.log(`Line diff: ${lineDiff}`);
+                const newSectionRangeEnd = ogSectionRange.end + lineDiff;
+                newSectionRange = { start: ogSectionRange.start, end: newSectionRangeEnd };
+                console.log(`New section range: ${newSectionRange.start}-${newSectionRange.end}`);
+                // function to add lineDiffToAdd to all the sections start and end in indexTreeJson.md
+                const updatedIndexTreeJson = updateIndexTree(tempIndexTreeJson, newSectionRange, sectionToEdit, lineDiff);
+                // write it to updatedindexTree.md
+                const updatedIndexTreeFilePath = path.join(__dirname, "outputs", "updatedIndexTree.md");
+                (0, fs_1.writeFileSync)(updatedIndexTreeFilePath, JSON.stringify(updatedIndexTreeJson, null, 2));
+                const BeforeNewSectionLines = tempPromptLines.slice(0, ogSectionRange.start - 1);
+                const AfterNewSectionLines = tempPromptLines.slice(ogSectionRange.end);
+                const NewSectionLines = newSectionContent.split("\n");
+                const newPromptLines = [...BeforeNewSectionLines, ...NewSectionLines, ...AfterNewSectionLines];
+                const newPromptContent = newPromptLines.join("\n");
+                const newPromptFilePath = path.join(__dirname, "outputs", "updatedPrompt.md");
+                (0, fs_1.writeFileSync)(newPromptFilePath, newPromptContent);
+            }
+        }
+    });
+}
+// function find line range with indexTreeJson, sectionToEdit
+function findLineRange(indexTreeJson, sectionToEdit) {
+    for (const section of indexTreeJson) {
+        if (section.sectionName === sectionToEdit) {
+            return { start: section.start, end: section.end };
+        }
+        if (section.children) {
+            const sectionRange = findLineRange(section.children, sectionToEdit);
+            if (sectionRange) {
+                return sectionRange;
+            }
+        }
+    }
+    return null;
+}
+function updateIndexTree(indexTreeJson, newSectionRange, sectionToEdit, lineDiff) {
+    let foundStatus = false;
+    function updateTree(tree, isBelowFound) {
+        for (const section of tree) {
+            // Update the section if it matches the one to edit
+            if (!foundStatus && section.sectionName === sectionToEdit) {
+                section.start = newSectionRange.start;
+                section.end = newSectionRange.end;
+                foundStatus = true;
+                isBelowFound = true; // Update the flag since the section is now found
+                continue; // Skip further processing of this section
+            }
+            // If we are below the found section, adjust the start and end
+            if (isBelowFound) {
+                section.start += lineDiff;
+                section.end += lineDiff;
+            }
+            // Recursively process children
+            if (section.children) {
+                updateTree(section.children, isBelowFound);
+            }
+        }
+        return indexTreeJson;
+    }
+    const updatedIndexTreeJson = updateTree(indexTreeJson, false);
+    return updatedIndexTreeJson;
+}
 function pipeline() {
     return __awaiter(this, void 0, void 0, function* () {
-        // await createIndexTree();
+        yield createIndexTree();
         yield createChangeList();
+        yield applyChanges();
     });
 }
 pipeline();
