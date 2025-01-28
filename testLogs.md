@@ -43,3 +43,17 @@ It also fails when giving info blandly like I dont want it to ask about target m
 
 -> Same 0% accuracy, because top 10 did not have call flow in it
 -> When looping through all sections, again accuracy is ~0%.
+
+### Testing Solution 4: IndexTree -> ChangeList -> ApplyChanges
+
+-> 4/6 choices were correct. 66% accuracy.
+-> But 1-2 additional changes needed to be done.
+-> Plus quality of changes reduced, because feedback list were long.
+
+-> But we know we are going to stick to this method and optimise it.
+
+#### Product Issues
+
+1. lineDiff mechanism is minorly innacurate. (fixed)
+2. Rule (changeList): Don't add repetitive dialogues or dialogues where it is not necessary to implement feedback.
+3. Still making up section names like 'Closing'.

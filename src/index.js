@@ -517,9 +517,9 @@ function applyChanges() {
             if (newSectionContent) {
                 successfulChangeCount++;
                 const newSectionLength = newSectionContent.split("\n").length;
-                const oldSectionLength = ogSectionRange.end - ogSectionRange.start;
+                const oldSectionLength = ogSectionRange.end - ogSectionRange.start + 1;
                 console.log(`New section length: ${newSectionLength}, Old section length: ${ogSectionRange.end - ogSectionRange.start}`);
-                const lineDiff = newSectionLength - oldSectionLength - 1;
+                const lineDiff = newSectionLength - oldSectionLength;
                 console.log(`Line diff: ${lineDiff}`);
                 const newSectionRangeEnd = ogSectionRange.end + lineDiff;
                 newSectionRange = { start: ogSectionRange.start, end: newSectionRangeEnd };

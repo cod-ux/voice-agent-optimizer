@@ -53,5 +53,5 @@ Instructions:
 1. Use section names and line ranges to structure the hierarchical tree.
 2. Include xmlHeading as true for XML-like sections and false for plain text.
 3. Include the lowest level of headings in the tree even if its not an xml heading.
-4. Each section name must be unique.
+4. Each section name must be unique. Section name must be exactly the same as mentioned in the <OriginalPrompt>, even if it is missing spaces between words.
 5. Return only the JSON representation of the hierarchical tree.

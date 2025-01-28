@@ -6,7 +6,6 @@ import OpenAI from "openai";
 import 'dotenv/config';
 import { zodResponseFormat } from "openai/helpers/zod";
 import {z} from "zod";
-import { JsonArray } from "@iarna/toml";
 
 
 const feedbackFilePath = path.join(__dirname, "..", "inputs", "feedback.txt");
@@ -580,10 +579,11 @@ async function applyChanges() {
       successfulChangeCount++;
 
       const newSectionLength = newSectionContent.split("\n").length;
-      const oldSectionLength = ogSectionRange.end - ogSectionRange.start;
-      console.log(`New section length: ${newSectionLength}, Old section length: ${ogSectionRange.end - ogSectionRange.start}`);
+      const oldSectionLength = ogSectionRange.end - ogSectionRange.start + 1;
+      console.log(`New section length: ${newSectionLength}, Old section length: ${oldSectionLength}`);
 
-      const lineDiff: number = newSectionLength - oldSectionLength - 1;
+      const lineDiff: number = newSectionLength - oldSectionLength;
+
       console.log(`Line diff: ${lineDiff}`);
 
       const newSectionRangeEnd = ogSectionRange.end + lineDiff;
