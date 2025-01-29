@@ -55,5 +55,6 @@ It also fails when giving info blandly like I dont want it to ask about target m
 #### Product Issues
 
 1. lineDiff mechanism is minorly innacurate. (fixed)
-2. Rule (changeList): Don't add repetitive dialogues or dialogues where it is not necessary to implement feedback.
-3. Still making up section names like 'Closing'.
+2. Rule (changeList): Don't add repetitive dialogues or dialogues where it is not necessary to implement feedback. (edited, not tested)
+3. Still making up section names like 'Closing'. (edited, not tested)
+4. Add UI

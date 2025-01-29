@@ -1,0 +1,20 @@
+{
+  "name": "voice-agent-optimizer-backend",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node-dev src/index.ts"
+  },
+  "dependencies": {
+    "dotenv": "^16.x",
+    "openai": "^4.x",
+    "zod": "^3.x"
+  },
+  "devDependencies": {
+    "@types/node": "^20.x",
+    "ts-node-dev": "^2.x",
+    "typescript": "^5.x"
+  }
+}

@@ -1,24 +1,20 @@
 {
   "name": "voice-agent-optimizer",
   "version": "1.0.0",
-  "description": "A Typescript based prompt optimisation and agent testing tool for voice agents",
-  "main": "index.js",
+  "private": true,
+  "workspaces": [
+    "src/frontend",
+    "src/backend"
+  ],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "tsc"
+    "dev:frontend": "cd src/frontend && npm run dev",
+    "dev:backend": "cd src/backend && npm run dev",
+    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "build:frontend": "cd src/frontend && npm run build",
+    "build:backend": "cd src/backend && npm run build",
+    "build": "npm run build:frontend && npm run build:backend"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "devDependencies": {
-    "@types/node": "^22.10.7",
-    "typescript": "^5.7.3"
-  },
-  "dependencies": {
-    "@iarna/toml": "^2.2.5",
-    "dotenv": "^16.4.7",
-    "fs": "^0.0.1-security",
-    "openai": "^4.79.4",
-    "zod": "^3.24.1"
+    "concurrently": "^8.x"
   }
 }

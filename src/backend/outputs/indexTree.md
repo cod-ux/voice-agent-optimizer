@@ -3,9 +3,53 @@
   {
     "sectionName": "Root (OriginalPrompt)",
     "start": 1,
-    "end": 413,
+    "end": 412,
     "xmlHeading": true,
     "children": [
+      {
+        "sectionName": "CallFlow",
+        "start": 47,
+        "end": 118,
+        "xmlHeading": true,
+        "children": [
+          {
+            "sectionName": "1. Introduction",
+            "start": 51,
+            "end": 62,
+            "xmlHeading": false
+          },
+          {
+            "sectionName": "2. Initial Discovery Questions",
+            "start": 64,
+            "end": 68,
+            "xmlHeading": false
+          },
+          {
+            "sectionName": "3. Ask core Discovery Questions.",
+            "start": 70,
+            "end": 90,
+            "xmlHeading": false
+          },
+          {
+            "sectionName": "4. Discovery Wrap-Up",
+            "start": 92,
+            "end": 98,
+            "xmlHeading": false
+          },
+          {
+            "sectionName": "5. Meeting Scheduling",
+            "start": 100,
+            "end": 112,
+            "xmlHeading": false
+          },
+          {
+            "sectionName": "6. Closing",
+            "start": 114,
+            "end": 117,
+            "xmlHeading": false
+          }
+        ]
+      },
       {
         "sectionName": "TrainingDocument",
         "start": 23,
@@ -34,12 +78,6 @@
             "sectionName": "TemplatedVariables",
             "start": 38,
             "end": 45,
-            "xmlHeading": true
-          },
-          {
-            "sectionName": "CallFlow",
-            "start": 47,
-            "end": 119,
             "xmlHeading": true
           },
           {
@@ -73,7 +111,7 @@
                 "xmlHeading": true
               },
               {
-                "sectionName": "ObjectionHandling (restatement)",
+                "sectionName": "ObjectionHandling",
                 "start": 263,
                 "end": 287,
                 "xmlHeading": true
@@ -98,7 +136,45 @@
             "sectionName": "CallFlowRestatement",
             "start": 306,
             "end": 378,
-            "xmlHeading": true
+            "xmlHeading": true,
+            "children": [
+              {
+                "sectionName": "1. Introduction",
+                "start": 310,
+                "end": 321,
+                "xmlHeading": false
+              },
+              {
+                "sectionName": "2. Initial Discovery Questions",
+                "start": 323,
+                "end": 327,
+                "xmlHeading": false
+              },
+              {
+                "sectionName": "3. Ask core Discovery Questions.",
+                "start": 329,
+                "end": 349,
+                "xmlHeading": false
+              },
+              {
+                "sectionName": "4. Discovery Wrap-Up",
+                "start": 351,
+                "end": 357,
+                "xmlHeading": false
+              },
+              {
+                "sectionName": "5. Meeting Scheduling",
+                "start": 359,
+                "end": 371,
+                "xmlHeading": false
+              },
+              {
+                "sectionName": "6. Closing",
+                "start": 373,
+                "end": 376,
+                "xmlHeading": false
+              }
+            ]
           },
           {
             "sectionName": "GoalRestatement",
@@ -107,7 +183,7 @@
             "xmlHeading": true
           },
           {
-            "sectionName": "PronounciationRules (restatement)",
+            "sectionName": "PronounciationRules",
             "start": 384,
             "end": 386,
             "xmlHeading": true
