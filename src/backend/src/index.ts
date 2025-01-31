@@ -6,6 +6,55 @@ import OpenAI from "openai";
 import "dotenv/config";
 import { zodResponseFormat } from "openai/helpers/zod";
 import { z } from "zod";
+import express from "express";
+import cors from "cors";
+
+import {
+  ApiResult,
+  JsonNode,
+  CreateIndexTreeRequest,
+  CreateIndexTreeResponse,
+  CreateChangeListRequest,
+  CreateChangeListResponse,
+  ApplyChangeRequest,
+  ApplyChangeResponse,
+  Change,
+  ChangeResult,
+  ApplyChangeResult
+} from './types';
+
+const app = express();
+
+// Configure CORS options
+const corsOptions = {
+  origin: process.env.FRONTEND_URL || "http://localhost:3000",
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true,
+};
+
+// Apply middleware
+app.use(express.json());
+app.use(cors(corsOptions));
+
+// Error handling middleware
+app.use(
+  (
+    err: Error,
+    req: express.Request,
+    res: express.Response,
+    next: express.NextFunction
+  ) => {
+    console.error(err.stack);
+    res.status(500).json({
+      success: false,
+      error: "Internal Server Error",
+      message: process.env.NODE_ENV === "development" ? err.message : undefined,
+    });
+  }
+);
+
+const PORT = process.env.PORT || 3001;
 
 const feedbackFilePath = path.join(
   __dirname,
@@ -31,11 +80,6 @@ const createIndexTreeFilePath = path.join(
   "prompts",
   "createIndexTree.md"
 );
-
-const changeLogPath = path.join(__dirname, "outputs", "changeLogs.txt");
-
-const feedback = readFileSync(feedbackFilePath, "utf-8");
-const ogPrompt = readFileSync(ogPromptFilePath, "utf-8");
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_KEY;
@@ -75,277 +119,381 @@ function addLineNumberToOgPrompt(ogPrompt: string) {
   return ogPromptWithLineNumbers;
 }
 
-// test to create Index tree with line ranges
-async function createIndexTree() {
-  console.log("Step 1: Adding line numbers to ogPrompt");
-  // step 1: add line numbers to ogprompt
+// function to create Index tree with line ranges
+async function createIndexTree(feedback: string, ogPrompt: string) {
+  try {
+    console.log("[createIndexTree] Starting with inputs:", {
+      feedbackLength: feedback.length,
+      ogPromptLength: ogPrompt.length
+    });
+    console.log("Step 1: Adding line numbers to ogPrompt");
+    // step 1: add line numbers to ogprompt
 
-  // add line number as 'line 1: ' to each line in ogPrompt
-  let ogPromptWithLineNumbers = addLineNumberToOgPrompt(ogPrompt);
+    // add line number as 'line 1: ' to each line in ogPrompt
+    let ogPromptWithLineNumbers = addLineNumberToOgPrompt(ogPrompt);
 
-  console.log(
-    "Step 2: Sending to LLM to create hierarchical tree with line ranges"
-  );
-  // step 2: send to llm and make hierarchical tree with line ranges
-  const createIndexTreePrompt = readFileSync(createIndexTreeFilePath, "utf-8");
-  const filledCreateIndexTreePrompt = createIndexTreePrompt.replace(
-    "{ogPrompt}",
-    ogPromptWithLineNumbers
-  );
-  const indexTreeBuffer = await client.chat.completions.create({
-    model: "gpt-4o",
-    messages: [{ role: "user", content: filledCreateIndexTreePrompt }],
-  });
+    console.log(
+      "Step 2: Sending to LLM to create hierarchical tree with line ranges"
+    );
+    // step 2: send to llm and make hierarchical tree with line ranges
+    const createIndexTreePrompt = readFileSync(createIndexTreeFilePath, "utf-8");
+    const filledCreateIndexTreePrompt = createIndexTreePrompt.replace(
+      "{ogPrompt}",
+      ogPromptWithLineNumbers
+    );
+    const indexTreeBuffer = await client.chat.completions.create({
+      model: "gpt-4o",
+      messages: [{ role: "user", content: filledCreateIndexTreePrompt }],
+    });
 
-  const indexTree = indexTreeBuffer.choices[0].message.content;
+    const indexTree = indexTreeBuffer.choices[0].message.content;
 
-  console.log("Step 3: Saving indexTree to file");
-  // step 3: create indexTree.md
+    console.log("Step 3: Saving indexTree to file");
+    // step 3: create indexTree.md
 
-  // check if its json format and then save it
-  if (!indexTree) {
-    throw new Error("Invalid response from LLM: Missing content.");
+    // check if its json format and then save it
+    if (!indexTree) {
+      throw new Error("Invalid response from LLM: Missing content.");
+    }
+
+    // extract json object between ```json and ``` characters
+    const startIndex = indexTree.indexOf("```json") + "```json".length;
+    const endIndex = indexTree.indexOf("```", startIndex);
+    const indexTreeJsonString = indexTree.substring(startIndex, endIndex);
+
+    // save the index tree to src/outputs
+    let indexTreePath = path.join(__dirname, "..", "outputs", "indexTree.md");
+    writeFileSync(indexTreePath, indexTreeJsonString);
+    
+    return indexTreeJsonString;
+  } catch (error) {
+    console.error("[createIndexTree] Error:", {
+      error,
+      message: error instanceof Error ? error.message : "Unknown error"
+    });
+    throw error;
   }
-
-  // extract json object between ```json and ``` characters
-  const startIndex = indexTree.indexOf("```json") + "```json".length;
-  const endIndex = indexTree.indexOf("```", startIndex);
-  const indexTreeJsonString = indexTree.substring(startIndex, endIndex);
-
-  // save the index tree to src/outputs
-  let indexTreePath = path.join(__dirname, "..", "outputs", "indexTree.md");
-  writeFileSync(indexTreePath, indexTreeJsonString);
 }
 
 // function to send ogPrompt, indexTree and feedback to openai to ask it to return a list of changes to make
-async function createChangeList() {
-  console.log("Step 1: Sending to LLM to create change log");
-  const indexTreeFilePath = path.join(
-    __dirname,
-    "..",
-    "outputs",
-    "indexTree.md"
-  );
-  const indexTree = readFileSync(indexTreeFilePath, "utf-8");
+async function createChangeList(prompt: string, indexTree: string, feedback: string) {
+  try {
+    console.log("[createChangeList] Starting with inputs:", {
+      promptLength: prompt.length,
+      indexTreeLength: indexTree.length,
+      feedbackLength: feedback.length
+    });
+    console.log("Step 1: Sending to LLM to create change log");
 
-  const createChangeListPromptFilePath = path.join(
-    __dirname,
-    "..",
-    "..",
-    "..",
-    "prompts",
-    "createChangeList.md"
-  );
-  const createChangeListPrompt = readFileSync(
-    createChangeListPromptFilePath,
-    "utf-8"
-  );
-  const filledCreateChangeListPrompt = createChangeListPrompt
-    .replace("{indexTree}", indexTree)
-    .replace("{feedback}", feedback)
-    .replace("{ogPrompt}", ogPrompt);
-
-  const changeListBuffer = await client.beta.chat.completions.parse({
-    model: "gpt-4o",
-    messages: [{ role: "user", content: filledCreateChangeListPrompt }],
-    response_format: zodResponseFormat(changeListSchema, "change_list"),
-  });
-  const changeList = changeListBuffer.choices[0].message.parsed;
-  console.log("Step 2: Saving changeList to file");
-  // step 2: create changeList.md
-  if (!changeList) {
-    throw new Error("Invalid response from LLM: Missing content.");
-  }
-
-  const changeListText = JSON.stringify(changeList, null, 2);
-  let changeListPath = path.join(__dirname, "..", "outputs", "changeList.md");
-  writeFileSync(changeListPath, changeListText);
-  console.log("Step 3: Done");
-}
-
-async function applyChanges() {
-  const changeListFilePath = path.join(
-    __dirname,
-    "..",
-    "outputs",
-    "changeList.md"
-  );
-  const changeList = readFileSync(changeListFilePath, "utf-8");
-
-  if (!changeList) {
-    throw new Error("Invalid response from LLM: Missing content.");
-  }
-
-  const changeListJson = JSON.parse(changeList);
-
-  const applyChangesPromptFilePath = path.join(
-    __dirname,
-    "..",
-    "..",
-    "..",
-    "prompts",
-    "applyChanges.md"
-  );
-  const applyChangesPrompt = readFileSync(applyChangesPromptFilePath, "utf-8");
-
-  const changeListArray = changeListJson.changeListArray;
-
-  let ogPromptContent = readFileSync(ogPromptFilePath, "utf-8");
-  const indexTreeFilePath = path.join(
-    __dirname,
-    "..",
-    "outputs",
-    "indexTree.md"
-  );
-  const ogIndexTree = readFileSync(indexTreeFilePath, "utf-8");
-  let successfulChangeCount = 0;
-
-  const updatedIndexTreeFilePath = path.join(
-    __dirname,
-    "..",
-    "outputs",
-    "updatedIndexTree.md"
-  );
-  writeFileSync(updatedIndexTreeFilePath, ogIndexTree);
-
-  const updatedPromptFilePath = path.join(
-    __dirname,
-    "..",
-    "outputs",
-    "updatedPrompt.md"
-  );
-  writeFileSync(updatedPromptFilePath, ogPromptContent);
-
-  for (let i = 0; i < changeListArray.length; i++) {
-    const change = changeListArray[i];
-    const sectionToEdit = change.sectionToEdit;
-    const changeInstructions = change.changeInstructions;
-
-    const tempIndexTree = readFileSync(updatedIndexTreeFilePath, "utf-8");
-    const tempPromptContent = readFileSync(updatedPromptFilePath, "utf-8");
-
-    console.log(
-      `Processing change ${i + 1} of ${
-        changeListArray.length
-      } - Section: ${sectionToEdit}`
+    const createChangeListPromptFilePath = path.join(
+      __dirname,
+      "..",
+      "..",
+      "..",
+      "prompts",
+      "createChangeList.md"
+    );
+    const createChangeListPrompt = readFileSync(
+      createChangeListPromptFilePath,
+      "utf-8"
     );
 
-    const tempIndexTreeJson = JSON.parse(tempIndexTree);
+    const filledCreateChangeListPrompt = createChangeListPrompt
+      .replace("{indexTree}", indexTree)
+      .replace("{feedback}", feedback)
+      .replace("{ogPrompt}", prompt);
 
-    const ogSectionRange: { start: number; end: number } | null = findLineRange(
-      tempIndexTreeJson,
-      sectionToEdit
-    );
-    try {
-      if (!ogSectionRange) {
-        throw new Error("Invalid section name: " + sectionToEdit);
-      }
-    } catch (error) {
-      console.error(`Error in applyChanges: ${error}`);
-      continue;
+    const o1_response = await DS_client.chat.completions.create({
+      model: "deepseek-reasoner",
+      messages: [{ role: "user", content: filledCreateChangeListPrompt }],
+    });
+    const changeListBuffer = await client.beta.chat.completions.parse({
+      model: "gpt-4o",
+      messages: [{ role: "user", content: `Given the following data, format it with the given response format: ${o1_response.choices[0].message.content}` }],
+      response_format: zodResponseFormat(changeListSchema, "change_list"),
+    });
+    const changeList = changeListBuffer.choices[0].message.parsed;
+    console.log("Step 2: Saving changeList to file");
+    // step 2: create changeList.md
+    if (!changeList) {
+      throw new Error("Invalid response from LLM: Missing content.");
     }
 
-    console.log(
-      `Section ${sectionToEdit} found at line range ${ogSectionRange.start}-${ogSectionRange.end}`
-    );
+    const changeListText = JSON.stringify(changeList, null, 2);
+    let changeListPath = path.join(__dirname, "..", "outputs", "changeList.md");
+    writeFileSync(changeListPath, changeListText);
+    console.log("Step 3: Done");
+    
+    return changeListText;
+  } catch (error) {
+    console.error("[createChangeList] Error:", {
+      error,
+      message: error instanceof Error ? error.message : "Unknown error"
+    });
+    throw error;
+  }
+}
 
-    const tempPromptLines = tempPromptContent.split("\n");
-    const lineRangeArray = tempPromptLines.slice(
-      ogSectionRange.start - 1,
-      ogSectionRange.end
-    );
-    const sectionToEditContent = lineRangeArray.join("\n");
+async function applyChanges(changeList: string, prompt: string, indexTree: string) {
+  try {
+    if (!changeList) {
+      throw new Error("Invalid response from LLM: Missing content.");
+    }
 
-    const filledImpChangesPrompt = applyChangesPrompt
-      .replace("{sectionName}", sectionToEdit)
-      .replace("{sectionContent}", sectionToEditContent)
-      .replace("{changeInstructions}", changeInstructions);
-
-    const updPromptSectionBuffer = await client.chat.completions.create({
-      model: "gpt-4o",
-      messages: [{ role: "user", content: filledImpChangesPrompt }],
+    console.log("[applyChanges] Attempting to parse changeList:", { 
+      changeListLength: changeList.length,
+      changeListPreview: changeList.substring(0, 100) + "..."
     });
 
-    const newSectionContent: string | null =
-      updPromptSectionBuffer.choices[0].message.content;
-    console.log(`-> New section content generated.`);
+    const changeListJson = JSON.parse(changeList);
 
-    let newSectionRange: { start: number; end: number } | null;
+    const applyChangesPromptFilePath = path.join(
+      __dirname,
+      "..",
+      "..",
+      "..",
+      "prompts",
+      "applyChanges.md"
+    );
+    const applyChangesPrompt = readFileSync(applyChangesPromptFilePath, "utf-8");
 
-    if (newSectionContent) {
-      successfulChangeCount++;
+    const changeListArray = changeListJson.changeListArray;
 
-      const newSectionLength = newSectionContent.split("\n").length;
-      const oldSectionLength = ogSectionRange.end - ogSectionRange.start + 1;
+    let tempPromptContent = prompt;
+    let tempIndexTree = indexTree;
+    let successfulChangeCount = 0;
+
+    const results = [];
+
+    for (let i = 0; i < changeListArray.length; i++) {
+      const change = changeListArray[i];
+      const sectionToEdit = change.sectionToEdit;
+      const changeInstructions = change.changeInstructions;
+
       console.log(
-        `New section length: ${newSectionLength}, Old section length: ${oldSectionLength}`
+        `Processing change ${i + 1} of ${
+          changeListArray.length
+        } - Section: ${sectionToEdit}`
       );
 
-      const lineDiff: number = newSectionLength - oldSectionLength;
+      let tempIndexTreeJson = JSON.parse(tempIndexTree);
 
-      console.log(`Line diff: ${lineDiff}`);
-
-      const newSectionRangeEnd = ogSectionRange.end + lineDiff;
-      newSectionRange = {
-        start: ogSectionRange.start,
-        end: newSectionRangeEnd,
-      };
-      console.log(
-        `New section range: ${newSectionRange.start}-${newSectionRange.end}`
-      );
-
-      // function to add lineDiffToAdd to all the sections start and end in indexTreeJson.md
-      const updatedIndexTreeJson = updateIndexTree(
+      const ogSectionRange: { start: number; end: number } | null = findLineRange(
         tempIndexTreeJson,
-        newSectionRange,
-        sectionToEdit,
-        lineDiff
+        sectionToEdit
       );
-      // write it to updatedindexTree.md
-      const updatedIndexTreeFilePath = path.join(
-        __dirname,
-        "..",
-        "outputs",
-        "updatedIndexTree.md"
-      );
-      writeFileSync(
-        updatedIndexTreeFilePath,
-        JSON.stringify(updatedIndexTreeJson, null, 2)
+      try {
+        if (!ogSectionRange) {
+          throw new Error("Invalid section name: " + sectionToEdit);
+        }
+      } catch (error) {
+        console.error(`Error in applyChanges: ${error}`);
+        results.push({
+          section: sectionToEdit,
+          success: false,
+          error: error instanceof Error ? error.message : "Unknown error"
+        });
+        continue;
+      }
+
+      console.log(
+        `Section ${sectionToEdit} found at line range ${ogSectionRange.start}-${ogSectionRange.end}`
       );
 
-      const BeforeNewSectionLines: string[] = tempPromptLines.slice(
-        0,
-        ogSectionRange.start - 1
-      );
-      const AfterNewSectionLines: string[] = tempPromptLines.slice(
+      const tempPromptLines = tempPromptContent.split("\n");
+      const lineRangeArray = tempPromptLines.slice(
+        ogSectionRange.start - 1,
         ogSectionRange.end
       );
-      const NewSectionLines: string[] = newSectionContent.split("\n");
+      const sectionToEditContent = lineRangeArray.join("\n");
 
-      const newPromptLines: string[] = [
-        ...BeforeNewSectionLines,
-        ...NewSectionLines,
-        ...AfterNewSectionLines,
-      ];
-      const newPromptContent: string = newPromptLines.join("\n");
+      const filledImpChangesPrompt = applyChangesPrompt
+        .replace("{sectionName}", sectionToEdit)
+        .replace("{sectionContent}", sectionToEditContent)
+        .replace("{changeInstructions}", changeInstructions);
 
-      const newPromptFilePath = path.join(
-        __dirname,
-        "..",
-        "outputs",
-        "updatedPrompt.md"
-      );
-      writeFileSync(newPromptFilePath, newPromptContent);
+      const updPromptSectionBuffer = await client.chat.completions.create({
+        model: "gpt-4o",
+        messages: [{ role: "user", content: filledImpChangesPrompt }],
+      });
+
+      const newSectionContent: string | null =
+        updPromptSectionBuffer.choices[0].message.content;
+      console.log(`-> New section content generated.`);
+
+      let newSectionRange: { start: number; end: number } | null;
+
+      if (newSectionContent) {
+        successfulChangeCount++;
+
+        const newSectionLength = newSectionContent.split("\n").length;
+        const oldSectionLength = ogSectionRange.end - ogSectionRange.start + 1;
+        console.log(
+          `New section length: ${newSectionLength}, Old section length: ${oldSectionLength}`
+        );
+
+        const lineDiff: number = newSectionLength - oldSectionLength;
+
+        console.log(`Line diff: ${lineDiff}`);
+
+        const newSectionRangeEnd = ogSectionRange.end + lineDiff;
+        newSectionRange = {
+          start: ogSectionRange.start,
+          end: newSectionRangeEnd,
+        };
+        console.log(
+          `New section range: ${newSectionRange.start}-${newSectionRange.end}`
+        );
+
+        // function to add lineDiffToAdd to all the sections start and end in indexTreeJson.md
+        const updatedIndexTreeJson = updateIndexTree(
+          tempIndexTreeJson,
+          newSectionRange,
+          sectionToEdit,
+          lineDiff
+        );
+        // write it to updatedindexTree.md
+
+        const BeforeNewSectionLines: string[] = tempPromptLines.slice(
+          0,
+          ogSectionRange.start - 1
+        );
+        const AfterNewSectionLines: string[] = tempPromptLines.slice(
+          ogSectionRange.end
+        );
+        const NewSectionLines: string[] = newSectionContent.split("\n");
+
+        const newPromptLines: string[] = [
+          ...BeforeNewSectionLines,
+          ...NewSectionLines,
+          ...AfterNewSectionLines,
+        ];
+        const updPromptContent: string = newPromptLines.join("\n");
+
+        // update prompt and indexTree after each round
+        tempPromptContent = updPromptContent;
+        tempIndexTree = JSON.stringify(updatedIndexTreeJson, null, 2);
+
+        results.push({
+          section: sectionToEdit,
+          success: true,
+          newContent: newSectionContent
+        });
+      }
     }
+
+    const finalPrompt = tempPromptContent;
+    const finalIndexTree = tempIndexTree;
+    
+    return {
+      updatedPrompt: finalPrompt,
+      updatedIndexTree: finalIndexTree,
+      successfulChangeCount,
+      changes: results
+    };
+  } catch (error) {
+    console.error("[applyChanges] Error:", {
+      error,
+      message: error instanceof Error ? error.message : "Unknown error",
+      changeListPreview: changeList.substring(0, 100) + "..."
+    });
+    throw error;
   }
 }
 
-interface JsonNode {
-  sectionName: string;
-  start: number;
-  end: number;
-  xmlHeading: boolean;
-  children?: JsonNode[]; // Optional, since not all nodes have children
+async function applyChange(
+  change: Change,
+  currentPrompt: string,
+  currentIndexTree: string
+): Promise<ApplyChangeResult> {
+  try {
+    console.log("[applyChange] Starting with inputs:", {
+      changeSection: change.sectionToEdit,
+      changeInstructionsLength: change.changeInstructions.length,
+      currentPromptLength: currentPrompt.length,
+      currentIndexTreeLength: currentIndexTree.length
+    });
+    
+    // Parse the current index tree
+    const indexTreeJson = JSON.parse(currentIndexTree);
+    
+    // Find the section to edit
+    const sectionRange = findLineRange(indexTreeJson, change.sectionToEdit);
+    if (!sectionRange) {
+      return {
+        updatedPrompt: currentPrompt,
+        updatedIndexTree: currentIndexTree,
+        result: {
+          section: change.sectionToEdit,
+          success: false,
+          error: `Section "${change.sectionToEdit}" not found in index tree`
+        }
+      };
+    }
+
+    // Get the content of the section to edit
+    const promptLines = currentPrompt.split("\n");
+    const sectionContent = promptLines
+      .slice(sectionRange.start - 1, sectionRange.end)
+      .join("\n");
+
+    // Create the prompt for applying changes
+    const applyChangesPromptFilePath = path.join(__dirname, "..", "..", "..", "prompts", "applyChanges.md");
+    const applyChangesPrompt = readFileSync(applyChangesPromptFilePath, "utf-8")
+      .replace("{sectionToEdit}", change.sectionToEdit)
+      .replace("{sectionContent}", sectionContent)
+      .replace("{changeInstructions}", change.changeInstructions);
+
+    // Get the completion from OpenAI
+    const completion = await client.chat.completions.create({
+      model: "gpt-4",
+      messages: [{ role: "user", content: applyChangesPrompt }],
+      temperature: 0,
+    });
+
+    const newSectionContent = completion.choices[0].message.content || "";
+    const NewSectionLines = newSectionContent.split("\n");
+    const lineDiff = NewSectionLines.length - (sectionRange.end - sectionRange.start + 1);
+
+    // Update the index tree
+    const updatedIndexTreeJson = updateIndexTree(
+      indexTreeJson,
+      {
+        start: sectionRange.start,
+        end: sectionRange.end + lineDiff,
+      },
+      change.sectionToEdit,
+      lineDiff
+    );
+
+    // Update the prompt content
+    const BeforeNewSectionLines = promptLines.slice(0, sectionRange.start - 1);
+    const AfterNewSectionLines = promptLines.slice(sectionRange.end);
+    const newPromptLines = [
+      ...BeforeNewSectionLines,
+      ...NewSectionLines,
+      ...AfterNewSectionLines,
+    ];
+
+    const updatedPrompt = newPromptLines.join("\n");
+    const updatedIndexTree = JSON.stringify(updatedIndexTreeJson, null, 2);
+
+    return {
+      updatedPrompt: updatedPrompt,
+      updatedIndexTree: updatedIndexTree,
+      result: {
+        section: change.sectionToEdit,
+        success: true,
+      }
+    };
+  } catch (error) {
+    console.error("[applyChange] Error:", {
+      error,
+      message: error instanceof Error ? error.message : "Unknown error occurred",
+      changeSection: change.sectionToEdit
+    });
+    throw error;
+  }
 }
 
 // function find line range with indexTreeJson, sectionToEdit
@@ -407,10 +555,105 @@ function updateIndexTree(
   return updatedIndexTreeJson;
 }
 
-async function pipeline() {
-  await createIndexTree();
-  await createChangeList();
-  await applyChanges();
-}
+// API Endpoints
+app.post<CreateIndexTreeRequest, ApiResult<CreateIndexTreeResponse>>("/api/create-index-tree", async (req, res): Promise<void> => {
+  try {
+    const { feedback, prompt } = req.body;
+    
+    if (!feedback || !prompt) {
+      res.status(400).json({ 
+        success: false, 
+        error: "Missing required parameters: feedback and prompt" 
+      });
+      return;
+    }
+    
+    const indexTree = await createIndexTree(feedback, prompt);
+    res.json({ 
+      success: true, 
+      data: { indexTree } 
+    });
+  } catch (error) {
+    console.error("Error in create-index-tree:", error);
+    res.status(500).json({ 
+      success: false, 
+      error: "Failed to create index tree",
+      message: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+});
 
-pipeline();
+app.post<CreateChangeListRequest, ApiResult<CreateChangeListResponse>>("/api/create-change-list", async (req, res): Promise<void> => {
+  try {
+    const { prompt, indexTree, feedback } = req.body;
+    
+    if (!prompt || !indexTree || !feedback) {
+      res.status(400).json({ 
+        success: false, 
+        error: "Missing required parameters: prompt, indexTree and feedback" 
+      });
+      return;
+    }
+    
+    const changeList = await createChangeList(prompt, indexTree, feedback);
+    res.json({ 
+      success: true, 
+      data: { changeList } 
+    });
+  } catch (error) {
+    console.error("Error in create-change-list:", error);
+    res.status(500).json({ 
+      success: false, 
+      error: "Failed to create change list",
+      message: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+});
+
+app.post<ApplyChangeRequest, ApiResult<ApplyChangeResponse>>("/api/apply-changes", async (req, res): Promise<void> => {
+  try {
+    console.log("[/api/apply-changes] Received request");
+    const { change, currentPrompt, currentIndexTree } = req.body;
+    
+    if (!change || !currentPrompt || !currentIndexTree) {
+      console.error("[/api/apply-changes] Missing required parameters:", {
+        hasChange: !!change,
+        hasPrompt: !!currentPrompt,
+        hasIndexTree: !!currentIndexTree
+      });
+      res.status(400).json({ 
+        success: false, 
+        error: "Missing required parameters: change, currentPrompt, and currentIndexTree" 
+      });
+      return;
+    }
+    
+    console.log("[/api/apply-changes] Applying change for section:", change.sectionToEdit);
+    const result = await applyChange(change, currentPrompt, currentIndexTree);
+    
+    console.log("[/api/apply-changes] Change applied successfully:", {
+      section: change.sectionToEdit,
+      success: result.result.success
+    });
+    
+    res.json({ 
+      success: true, 
+      data: result
+    });
+  } catch (error) {
+    console.error("[/api/apply-changes] Error:", {
+      error,
+      message: error instanceof Error ? error.message : "Unknown error"
+    });
+    res.status(500).json({ 
+      success: false, 
+      error: "Failed to apply changes",
+      message: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+});
+
+// Start the server
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});

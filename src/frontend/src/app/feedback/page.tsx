@@ -18,7 +18,7 @@ export default function Feedback() {
   const handleNext = () => {
     // Save feedback to localStorage before navigating
     localStorage.setItem("feedback", feedback);
-    router.push("/results");
+    router.push("/improve");
   };
 
   return (

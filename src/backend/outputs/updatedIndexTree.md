@@ -8,7 +8,7 @@
       {
         "sectionName": "CallFlow",
         "start": 47,
-        "end": 118,
+        "end": 119,
         "xmlHeading": true,
         "children": [
           {
@@ -24,7 +24,7 @@
             "xmlHeading": false
           },
           {
-            "sectionName": "3. Ask core Discovery Questions.",
+            "sectionName": "3. Ask core Discovery Questions",
             "start": 70,
             "end": 90,
             "xmlHeading": false
@@ -44,7 +44,7 @@
           {
             "sectionName": "6. Closing",
             "start": 114,
-            "end": 117,
+            "end": 118,
             "xmlHeading": false
           }
         ]
@@ -108,12 +108,6 @@
                 "start": 215,
                 "end": 261,
                 "xmlHeading": true
-              },
-              {
-                "sectionName": "ObjectionHandling",
-                "start": 263,
-                "end": 287,
-                "xmlHeading": true
               }
             ]
           },
@@ -135,45 +129,7 @@
             "sectionName": "CallFlowRestatement",
             "start": 306,
             "end": 378,
-            "xmlHeading": true,
-            "children": [
-              {
-                "sectionName": "1. Introduction",
-                "start": 310,
-                "end": 321,
-                "xmlHeading": false
-              },
-              {
-                "sectionName": "2. Initial Discovery Questions",
-                "start": 323,
-                "end": 327,
-                "xmlHeading": false
-              },
-              {
-                "sectionName": "3. Ask core Discovery Questions.",
-                "start": 329,
-                "end": 349,
-                "xmlHeading": false
-              },
-              {
-                "sectionName": "4. Discovery Wrap-Up",
-                "start": 351,
-                "end": 357,
-                "xmlHeading": false
-              },
-              {
-                "sectionName": "5. Meeting Scheduling",
-                "start": 359,
-                "end": 371,
-                "xmlHeading": false
-              },
-              {
-                "sectionName": "6. Closing",
-                "start": 373,
-                "end": 376,
-                "xmlHeading": false
-              }
-            ]
+            "xmlHeading": true
           },
           {
             "sectionName": "GoalRestatement",
@@ -188,6 +144,24 @@
             "xmlHeading": true
           }
         ]
+      },
+      {
+        "sectionName": "ObjectionHandling",
+        "start": 164,
+        "end": 286,
+        "xmlHeading": true
+      },
+      {
+        "sectionName": "MeetingScheduling",
+        "start": 290,
+        "end": 304,
+        "xmlHeading": true
+      },
+      {
+        "sectionName": "CallFlowRestatement",
+        "start": 306,
+        "end": 378,
+        "xmlHeading": true
       }
     ]
   }

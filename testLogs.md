@@ -54,7 +54,10 @@ It also fails when giving info blandly like I dont want it to ask about target m
 
 #### Product Issues
 
-1. lineDiff mechanism is minorly innacurate. (fixed)
-2. Rule (changeList): Don't add repetitive dialogues or dialogues where it is not necessary to implement feedback. (edited, not tested)
-3. Still making up section names like 'Closing'. (edited, not tested)
-4. Add UI
+- Rule (changeList): Don't add repetitive dialogues or dialogues where it is not necessary to implement feedback. (edited, not tested)
+- Need to group feedback into bunches to create seperate tasks.
+- Can try to split problem identification and rewriting section (OR)
+- Can try to make index trees more detailed, create a list of problem areas, then a bunch of concurrent calls to create change instructions for each of them. And then use applyChange (OR)
+- Can try to make index trees more detailed, create a list of mini problem areas, and use applyChange to fix the problem areas based on feedback and ogPrompt (OR)
+- Can try to make index trees more detailed, create a problems list, then create a solutions list and then can apply changes one by one (OR)
+- Can try to make index trees more detailed, create changeList with reasoning model instead and then can apply changes one by one.
