@@ -16,10 +16,16 @@ import {
   CreateIndexTreeResponse,
   CreateChangeListRequest,
   CreateChangeListResponse,
+  CreateProblemListRequest,
+  CreateProblemListResponse,
+  CreateSolutionListRequest,
+  CreateSolutionListResponse,
   ApplyChangeRequest,
   ApplyChangeResponse,
   Change,
   ChangeResult,
+  Problem,
+  Solution,
   ApplyChangeResult
 } from './types';
 
@@ -101,11 +107,24 @@ const client = new OpenAI({
 
 const changeItemSchema = z.object({
   sectionToEdit: z.string(),
-  changeInstructions: z.string(),
+  howToEdit: z.string(),
 });
 
 const changeListSchema = z.object({
   changeListArray: z.array(changeItemSchema),
+});
+
+const problemItemSchema = z.object({
+  sectionToEdit: z.string(),
+});
+
+const problemListSchema = z.object({
+  changeListArray: z.array(problemItemSchema),
+});
+
+const solutionSchema = z.object({
+  sectionToEdit: z.string(),
+  howToEdit: z.string(),
 });
 
 // function to add line numbers to ogPrompt
@@ -175,6 +194,99 @@ async function createIndexTree(feedback: string, ogPrompt: string) {
   }
 }
 
+async function createProblemList(indexTree: string, prompt: string, feedback: string): Promise<Problem[]> {
+  try {
+    console.log("[createChangeList] Starting with inputs:", {
+      promptLength: prompt.length,
+      indexTreeLength: indexTree.length,
+      feedbackLength: feedback.length
+    });
+  } catch (error) {
+    console.error("[createChangeList] Error:", {
+      error,
+      message: error instanceof Error ? error.message : "Unknown error"
+    });
+    throw error;
+  }
+
+
+  console.log("Creating problems list...");
+  const createProblemListPromptFilePath = path.join(
+    __dirname,
+    "..",
+    "..",
+    "..",
+    "prompts",
+    "createProblemList.md"
+  );
+  const createProblemListPrompt = readFileSync(
+    createProblemListPromptFilePath,
+    "utf-8"
+  );
+
+  const filledCreateProblemListPrompt = createProblemListPrompt
+    .replace("{indexTree}", indexTree)
+    .replace("{feedback}", feedback)
+    .replace("{ogPrompt}", prompt);
+
+  const changeListBuffer = await client.beta.chat.completions.parse({
+    model: "gpt-4o",
+    messages: [{ role: "user", content: filledCreateProblemListPrompt }],
+    response_format: zodResponseFormat(problemListSchema, "problem_list"),
+  });
+
+  const problemList = changeListBuffer.choices[0].message.parsed;
+  console.log("Step 2: Saving problemList to file");
+
+  if (!problemList) {
+    throw new Error("Invalid response from LLM: Missing content.");
+  }
+
+  return problemList.changeListArray;
+}
+
+async function createSolutionList(problemList: Problem[], prompt: string, feedback: string): Promise<Solution[]> {
+  let solutionList: Solution[] = [];
+
+  // load createChangeListPrompt
+  const createSolutionPromptFilePath = path.join(
+    __dirname,
+    "..",
+    "..",
+    "..",
+    "prompts",
+    "createSolution.md"
+  );
+  const createSolutionListPrompt = readFileSync(
+    createSolutionPromptFilePath,
+    "utf-8"
+  );
+
+  for (const problem of problemList) {
+    const filledCreateSolutionListPrompt = createSolutionListPrompt
+      .replace("{sectionName}", problem.sectionToEdit)
+      .replace("{ogPrompt}", prompt)
+      .replace("{feedback}", feedback);
+
+    const changeBuffer = await client.beta.chat.completions.parse({
+      model: "gpt-4o",
+      messages: [{ role: "user", content: filledCreateSolutionListPrompt }],
+      response_format: zodResponseFormat(solutionSchema, "solution"),
+    });
+
+    const change = changeBuffer.choices[0].message.parsed;
+    if (!change) {
+      throw new Error("Invalid response from LLM: Missing content.");
+    }
+
+    solutionList.push(change);
+
+    }
+  
+  return solutionList;
+  
+}
+
 // function to send ogPrompt, indexTree and feedback to openai to ask it to return a list of changes to make
 async function createChangeList(prompt: string, indexTree: string, feedback: string) {
   try {
@@ -191,7 +303,7 @@ async function createChangeList(prompt: string, indexTree: string, feedback: str
       "..",
       "..",
       "prompts",
-      "createChangeList.md"
+      "createSolution.md"
     );
     const createChangeListPrompt = readFileSync(
       createChangeListPromptFilePath,
@@ -203,13 +315,9 @@ async function createChangeList(prompt: string, indexTree: string, feedback: str
       .replace("{feedback}", feedback)
       .replace("{ogPrompt}", prompt);
 
-    const o1_response = await DS_client.chat.completions.create({
-      model: "deepseek-reasoner",
-      messages: [{ role: "user", content: filledCreateChangeListPrompt }],
-    });
     const changeListBuffer = await client.beta.chat.completions.parse({
       model: "gpt-4o",
-      messages: [{ role: "user", content: `Given the following data, format it with the given response format: ${o1_response.choices[0].message.content}` }],
+      messages: [{ role: "user", content: filledCreateChangeListPrompt }],
       response_format: zodResponseFormat(changeListSchema, "change_list"),
     });
     const changeList = changeListBuffer.choices[0].message.parsed;
@@ -234,7 +342,7 @@ async function createChangeList(prompt: string, indexTree: string, feedback: str
   }
 }
 
-async function applyChanges(changeList: string, prompt: string, indexTree: string) {
+async function applyChangesFromList(changeList: string, prompt: string, indexTree: string) {
   try {
     if (!changeList) {
       throw new Error("Invalid response from LLM: Missing content.");
@@ -268,7 +376,7 @@ async function applyChanges(changeList: string, prompt: string, indexTree: strin
     for (let i = 0; i < changeListArray.length; i++) {
       const change = changeListArray[i];
       const sectionToEdit = change.sectionToEdit;
-      const changeInstructions = change.changeInstructions;
+      const changeInstructions = change.howToEdit;
 
       console.log(
         `Processing change ${i + 1} of ${
@@ -402,20 +510,70 @@ async function applyChanges(changeList: string, prompt: string, indexTree: strin
 }
 
 async function applyChange(
-  change: Change,
+  change: Solution,
   currentPrompt: string,
   currentIndexTree: string
 ): Promise<ApplyChangeResult> {
   try {
     console.log("[applyChange] Starting with inputs:", {
-      changeSection: change.sectionToEdit,
-      changeInstructionsLength: change.changeInstructions.length,
-      currentPromptLength: currentPrompt.length,
-      currentIndexTreeLength: currentIndexTree.length
+      change: change,
+      changeType: typeof change,
+      hasSection: change?.sectionToEdit !== undefined,
+      hasInstructions: change?.howToEdit !== undefined,
+      promptType: typeof currentPrompt,
+      indexTreeType: typeof currentIndexTree
     });
+
+    if (!change || !change.sectionToEdit || !change.howToEdit) {
+      console.error("[applyChange] Invalid change object:", change);
+      return {
+        updatedPrompt: currentPrompt,
+        updatedIndexTree: currentIndexTree,
+        result: {
+          section: change?.sectionToEdit || 'unknown',
+          success: false,
+          error: 'Invalid change object: missing required properties'
+        }
+      };
+    }
+
+    if (!currentPrompt || !currentIndexTree) {
+      console.error("[applyChange] Missing required inputs:", {
+        hasPrompt: !!currentPrompt,
+        hasIndexTree: !!currentIndexTree
+      });
+      return {
+        updatedPrompt: currentPrompt,
+        updatedIndexTree: currentIndexTree,
+        result: {
+          section: change.sectionToEdit,
+          success: false,
+          error: 'Missing required inputs: prompt or indexTree'
+        }
+      };
+    }
     
     // Parse the current index tree
-    const indexTreeJson = JSON.parse(currentIndexTree);
+    let indexTreeJson;
+    try {
+      indexTreeJson = JSON.parse(currentIndexTree);
+      console.log("[applyChange] Successfully parsed index tree:", {
+        type: typeof indexTreeJson,
+        isArray: Array.isArray(indexTreeJson),
+        length: indexTreeJson?.length
+      });
+    } catch (e: unknown) {
+      console.error("[applyChange] Failed to parse index tree:", e);
+      return {
+        updatedPrompt: currentPrompt,
+        updatedIndexTree: currentIndexTree,
+        result: {
+          section: change.sectionToEdit,
+          success: false,
+          error: 'Failed to parse index tree: ' + (e instanceof Error ? e.message : String(e))
+        }
+      };
+    }
     
     // Find the section to edit
     const sectionRange = findLineRange(indexTreeJson, change.sectionToEdit);
@@ -442,11 +600,11 @@ async function applyChange(
     const applyChangesPrompt = readFileSync(applyChangesPromptFilePath, "utf-8")
       .replace("{sectionToEdit}", change.sectionToEdit)
       .replace("{sectionContent}", sectionContent)
-      .replace("{changeInstructions}", change.changeInstructions);
+      .replace("{changeInstructions}", change.howToEdit);
 
     // Get the completion from OpenAI
     const completion = await client.chat.completions.create({
-      model: "gpt-4",
+      model: "gpt-4o",
       messages: [{ role: "user", content: applyChangesPrompt }],
       temperature: 0,
     });
@@ -478,6 +636,35 @@ async function applyChange(
     const updatedPrompt = newPromptLines.join("\n");
     const updatedIndexTree = JSON.stringify(updatedIndexTreeJson, null, 2);
 
+    // Log the updated index tree structure
+    console.log("[applyChange] Updated index tree structure:", {
+      originalSection: change.sectionToEdit,
+      lineDiff,
+      tree: JSON.stringify(updatedIndexTreeJson, (key, value) => {
+        if (key === 'children') {
+          return value ? `[${value.length} children]` : value;
+        }
+        return value;
+      }, 2)
+    });
+
+    // Log detailed section changes
+    const logSectionChanges = (tree: JsonNode[], depth = 0) => {
+      tree.forEach(node => {
+        console.log("[applyChange] Section:", {
+          depth,
+          name: node.sectionName,
+          range: `${node.start}-${node.end}`,
+          hasChildren: node.children?.length || 0
+        });
+        if (node.children) {
+          logSectionChanges(node.children, depth + 1);
+        }
+      });
+    };
+    console.log("[applyChange] Detailed section changes:");
+    logSectionChanges(updatedIndexTreeJson);
+
     return {
       updatedPrompt: updatedPrompt,
       updatedIndexTree: updatedIndexTree,
@@ -495,6 +682,58 @@ async function applyChange(
     throw error;
   }
 }
+
+app.post("/api/apply-changes", async (req, res): Promise<void> => {
+  try {
+    const { change, currentPrompt, currentIndexTree } = req.body;
+    
+    console.log("[/api/apply-changes] Received request:", {
+      hasChange: !!change,
+      changeType: typeof change,
+      changeDetails: change,
+      hasPrompt: !!currentPrompt,
+      promptLength: currentPrompt?.length,
+      hasIndexTree: !!currentIndexTree,
+      indexTreeLength: currentIndexTree?.length
+    });
+
+    if (!change || !currentPrompt || !currentIndexTree) {
+      console.error("[/api/apply-changes] Missing required parameters:", {
+        hasChange: !!change,
+        hasPrompt: !!currentPrompt,
+        hasIndexTree: !!currentIndexTree
+      });
+      res.status(400).json({ 
+        success: false, 
+        error: "Missing required parameters: change, currentPrompt, and currentIndexTree" 
+      });
+      return;
+    }
+    
+    console.log("[/api/apply-changes] Applying change for section:", change.sectionToEdit);
+    const result = await applyChange(change, currentPrompt, currentIndexTree);
+    
+    console.log("[/api/apply-changes] Change applied successfully:", {
+      section: change.sectionToEdit,
+      success: result.result.success
+    });
+    
+    res.json({ 
+      success: true, 
+      data: result
+    });
+  } catch (error) {
+    console.error("[/api/apply-changes] Error:", {
+      error,
+      message: error instanceof Error ? error.message : "Unknown error"
+    });
+    res.status(500).json({ 
+      success: false, 
+      error: "Failed to apply changes",
+      message: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+});
 
 // function find line range with indexTreeJson, sectionToEdit
 function findLineRange(
@@ -526,33 +765,33 @@ function updateIndexTree(
   let foundStatus: boolean = false;
 
   function updateTree(tree: JsonNode[], isBelowFound: boolean): JsonNode[] {
-    for (const section of tree) {
+    return tree.map(section => {
+      const updatedSection = { ...section };
+      
       // Update the section if it matches the one to edit
       if (!foundStatus && section.sectionName === sectionToEdit) {
-        section.start = newSectionRange.start;
-        section.end = newSectionRange.end;
+        updatedSection.start = newSectionRange.start;
+        updatedSection.end = newSectionRange.end;
         foundStatus = true;
-        isBelowFound = true; // Update the flag since the section is now found
-        continue; // Skip further processing of this section
+        isBelowFound = true;
       }
 
       // If we are below the found section, adjust the start and end
       if (isBelowFound) {
-        section.start += lineDiff;
-        section.end += lineDiff;
+        updatedSection.start += lineDiff;
+        updatedSection.end += lineDiff;
       }
 
       // Recursively process children
-      if (section.children) {
-        updateTree(section.children, isBelowFound);
+      if (updatedSection.children) {
+        updatedSection.children = updateTree(updatedSection.children, isBelowFound);
       }
-    }
 
-    return indexTreeJson;
+      return updatedSection;
+    });
   }
 
-  const updatedIndexTreeJson = updateTree(indexTreeJson, false);
-  return updatedIndexTreeJson;
+  return updateTree(indexTreeJson, false);
 }
 
 // API Endpoints
@@ -583,7 +822,7 @@ app.post<CreateIndexTreeRequest, ApiResult<CreateIndexTreeResponse>>("/api/creat
   }
 });
 
-app.post<CreateChangeListRequest, ApiResult<CreateChangeListResponse>>("/api/create-change-list", async (req, res): Promise<void> => {
+app.post<CreateProblemListRequest, ApiResult<CreateProblemListResponse>>("/api/create-problem-list", async (req, res): Promise<void> => {
   try {
     const { prompt, indexTree, feedback } = req.body;
     
@@ -594,11 +833,54 @@ app.post<CreateChangeListRequest, ApiResult<CreateChangeListResponse>>("/api/cre
       });
       return;
     }
-    
-    const changeList = await createChangeList(prompt, indexTree, feedback);
+
+    const problemList = await createProblemList(prompt, indexTree, feedback);
+    if (!problemList) {
+      res.status(500).json({ 
+        success: false, 
+        error: "Failed to create problem list" 
+      });
+      return;
+    } 
+
     res.json({ 
       success: true, 
-      data: { changeList } 
+      data: { problemList }
+    });
+  } catch (error) {
+    console.error("Error in create-problem-list:", error);
+    res.status(500).json({ 
+      success: false, 
+      error: "Failed to create problem list",
+      message: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+});
+
+app.post<CreateSolutionListRequest, ApiResult<CreateSolutionListResponse>>("/api/create-solution-list", async (req, res): Promise<void> => {
+  try {
+    const { problemList, prompt, feedback } = req.body;
+    
+    if (!prompt || !problemList) {
+      res.status(400).json({ 
+        success: false, 
+        error: "Missing required parameters: prompt, indexTree and problemList" 
+      });
+      return;
+    }
+    
+    const solutionList = await createSolutionList(problemList, prompt, feedback);
+    if (!solutionList) {
+      res.status(500).json({ 
+        success: false, 
+        error: "Failed to create change list" 
+      });
+      return;
+    }
+
+    res.json({ 
+      success: true, 
+      data: { solutionList } 
     });
   } catch (error) {
     console.error("Error in create-change-list:", error);

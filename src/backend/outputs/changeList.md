@@ -2,11 +2,15 @@
   "changeListArray": [
     {
       "sectionToEdit": "CallFlow",
-      "changeInstructions": "Modify the 'Introduce yourself exactly in these words' script in Step 1: Introduction of the CallFlow to explicitly set the stage. Replace the existing purpose statement with: 'Hi {prospect_name}. I'm Jordan, your friendly AI assistant from ZoomInfo. How are you doing today? I appreciate you taking the time to chat with me. I’d like to briefly share what I'll be exploring today before we start: I want to learn about your process, ideal customers, and other key aspects to see how ZoomInfo can support your business growth. Let's see how we can make this a valuable conversation for you. Is that alright with you?' Ensure the phrase 'I want to learn about your process, ideal customers' is verbatim from the feedback."
+      "changeInstructions": "Modify the section where the prospect's email is acquired. The change should ensure that the voice agent waits for the prospect to spell out their email without interrupting, and confirms the email back to them.\n\nStep-by-step instructions:\n1. When the prospect starts spelling their email, the agent must give them enough time to finish spelling without interruptions. Insert a brief pause of 3 seconds (or silence, if applicable) each time a letter is communicated to ensure the agent doesn't inadvertently cut the prospect off.\n   \n2. Once the prospect finishes spelling their email, the agent must immediately repeat the spelled email address back to the prospect for confirmation. Use the sentence \"To confirm, you said your email is [spelled email], correct?\" to ensure clarity.\n\n3. If the prospect indicates any changes or corrections, repeat back the corrected version for final confirmation.\n\nAdd these instructions right after the original instruction to ask for the full email from start to finish, ensuring both listening and confirmation are consistently applied."
     },
     {
-      "sectionToEdit": "CallFlow",
-      "changeInstructions": "Update the transition statement in Step 5: Meeting Scheduling of the CallFlow. Replace the existing 'I'd like to schedule a more detailed conversation...' with the exact feedback phrase: 'From what you’ve shared, I think it would be great to get you in touch with one of our AEs to discuss how ZoomInfo can support your business needs. What does your calendar look like next week?' Maintain the scheduling rules/confirmation steps that follow this statement."
+      "sectionToEdit": "AdditionalRules",
+      "changeInstructions": "Add a rule to ensure that when acquiring information from the prospect, the agent must:\n\nStep-by-step instructions:\n1. Implement reinforcement prompts encouraging patience and focus on user input. For example, \"Please take your time, I value accuracy and want to ensure we have your details correct.\"\n\n2. Emphasize the importance of a clear dialog with the prospect by using positive reinforcement. Note that a satisfied prospect will lead to better reception of the call and services."
+    },
+    {
+      "sectionToEdit": "ObjectionHandling",
+      "changeInstructions": "In the subsection about repeating information, ensure the agent knows how to respond if the prospect seems unsure of what they hear from the agent.\n\nStep-by-step instructions:\n1. Use the response: \"No worries, I can repeat any part or spell anything out if necessary. I want to make sure everything is clear and accurate for our records.\"\n\n2. Encourage a back-and-forth where the prospect is comfortable correcting or clarifying details if needed."
     }
   ]
 }

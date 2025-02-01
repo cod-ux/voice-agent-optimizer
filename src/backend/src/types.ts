@@ -72,3 +72,32 @@ export interface ApplyChangeResult {
   updatedIndexTree: string;
   result: ChangeResult;
 }
+
+export interface Problem {
+  sectionToEdit: string;
+}
+
+export interface Solution {
+  sectionToEdit: string;
+  howToEdit: string;
+}
+
+export interface CreateProblemListRequest {
+  prompt: string;
+  indexTree: string;
+  feedback: string;
+}
+
+export interface CreateProblemListResponse {
+  problemList: Problem[];
+}
+
+export interface CreateSolutionListRequest {
+  problemList: Problem[];
+  prompt: string;
+  feedback: string;
+}
+
+export interface CreateSolutionListResponse {
+  solutionList: Solution[];
+}

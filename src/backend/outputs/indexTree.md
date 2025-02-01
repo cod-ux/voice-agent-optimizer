@@ -1,95 +1,101 @@
 
 [
   {
-    "sectionName": "Root (OriginalPrompt)",
+    "sectionName": "OriginalPrompt",
     "start": 1,
-    "end": 421,
+    "end": 539,
     "xmlHeading": true,
     "children": [
       {
         "sectionName": "TrainingDocument",
-        "start": 23,
-        "end": 396,
+        "start": 33,
+        "end": 495,
         "xmlHeading": true,
         "children": [
           {
-            "sectionName": "PronounciationRules",
-            "start": 25,
-            "end": 27,
-            "xmlHeading": true
-          },
-          {
-            "sectionName": "Goal",
-            "start": 29,
-            "end": 31,
-            "xmlHeading": true
-          },
-          {
-            "sectionName": "Context",
-            "start": 33,
-            "end": 36,
+            "sectionName": "GoalOfCall",
+            "start": 35,
+            "end": 50,
             "xmlHeading": true
           },
           {
             "sectionName": "TemplatedVariables",
-            "start": 38,
-            "end": 45,
+            "start": 52,
+            "end": 62,
             "xmlHeading": true
           },
           {
             "sectionName": "CallFlow",
-            "start": 47,
-            "end": 127,
+            "start": 64,
+            "end": 85,
+            "xmlHeading": true
+          },
+          {
+            "sectionName": "HowToScheduleATrialSession",
+            "start": 87,
+            "end": 101,
             "xmlHeading": true
           },
           {
             "sectionName": "KnowledgeBase",
-            "start": 129,
-            "end": 296,
+            "start": 103,
+            "end": 355,
             "xmlHeading": true,
             "children": [
               {
-                "sectionName": "DiscoveryQuestions",
-                "start": 130,
-                "end": 149,
+                "sectionName": "ContextOnMPACSports",
+                "start": 106,
+                "end": 120,
                 "xmlHeading": true
               },
               {
-                "sectionName": "CompanyPitch",
-                "start": 151,
-                "end": 170,
+                "sectionName": "MPACCenterLocation",
+                "start": 122,
+                "end": 135,
                 "xmlHeading": true
               },
               {
-                "sectionName": "ObjectionHandling",
-                "start": 172,
-                "end": 295,
+                "sectionName": "ProgramDetails",
+                "start": 137,
+                "end": 290,
                 "xmlHeading": true
               }
             ]
           },
           {
-            "sectionName": "FeaturesAndFunctions",
-            "start": 223,
-            "end": 269,
+            "sectionName": "ObjectionHandling",
+            "start": 359,
+            "end": 378,
             "xmlHeading": true
           },
           {
-            "sectionName": "MeetingScheduling",
-            "start": 298,
-            "end": 312,
+            "sectionName": "QualificationCriteria",
+            "start": 380,
+            "end": 407,
+            "xmlHeading": true
+          },
+          {
+            "sectionName": "OtherQuestionsAndAnswers",
+            "start": 409,
+            "end": 416,
+            "xmlHeading": true
+          },
+          {
+            "sectionName": "AdditionalRules",
+            "start": 418,
+            "end": 458,
+            "xmlHeading": true
+          },
+          {
+            "sectionName": "Objective",
+            "start": 460,
+            "end": 470,
             "xmlHeading": true
           },
           {
             "sectionName": "CallFlowRestatement",
-            "start": 314,
-            "end": 386,
-            "xmlHeading": true
-          },
-          {
-            "sectionName": "GoalRestatement",
-            "start": 388,
-            "end": 390,
+            "start": 472,
+            "end": 493,
             "xmlHeading": true
           }
         ]

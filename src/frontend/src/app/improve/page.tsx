@@ -3,10 +3,21 @@ import { useState, useEffect, useCallback } from "react";
 import Steps from "../../components/Steps";
 import TerminalLog, { LogMessage } from "../../components/TerminalLog";
 import { useRouter } from "next/navigation";
+import {
+  validatePrompt,
+  validateFeedback,
+  validateIndexTree,
+  validateProblemList,
+  validateSolutionList,
+} from "../../utils/validation";
 
-interface ChangeItem {
+interface ProblemItem {
   sectionToEdit: string;
-  changeInstructions: string;
+}
+
+interface SolutionItem {
+  sectionToEdit: string;
+  howToEdit: string;
 }
 
 // Backend API configuration
@@ -93,6 +104,114 @@ export default function Results() {
       return newIndexTree;
     };
 
+    const createProblemList = async (
+      prompt: string,
+      indexTree: string,
+      feedback: string
+    ): Promise<ProblemItem[]> => {
+      addMessage("Starting to create problem list...", "info");
+      console.log("[Problem List] Starting creation with:", {
+        promptLength: prompt.length,
+        indexTreeLength: indexTree.length,
+        feedbackLength: feedback.length,
+      });
+
+      const response = await fetch(`${BACKEND_URL}/api/create-problem-list`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          prompt,
+          indexTree,
+          feedback,
+        }),
+      });
+
+      const result = await response.json();
+      console.log("[Problem List] API response:", {
+        success: result.success,
+        error: result.error,
+        dataLength: result.data?.problemList?.length,
+      });
+
+      if (!result.success) {
+        console.error("[Problem List] Creation failed:", result.error);
+        throw new Error(result.error || "Failed to create problem list");
+      }
+
+      // parse problem list
+      const { problemList } = result.data;
+      console.log("[Problem List] API returned:", {
+        problemListLength: problemList?.length,
+        problemListType: typeof problemList,
+        problemList: problemList,
+      });
+
+      // The problemList is already an object, no need to parse it
+      const problemListArray = Array.isArray(problemList) ? problemList : [];
+
+      if (!problemListArray.length) {
+        console.error(
+          "[Problem List] Invalid or empty problem list:",
+          problemList
+        );
+        throw new Error("Failed to get valid problem list");
+      }
+
+      localStorage.setItem("problemList", JSON.stringify(problemListArray));
+      addMessage("Successfully created problem list!", "success");
+
+      return problemListArray;
+    };
+
+    const createSolutionList = async (
+      problemList: ProblemItem[],
+      prompt: string,
+      feedback: string
+    ): Promise<SolutionItem[]> => {
+      addMessage("Starting to create solution list...", "info");
+      console.log("[Solution List] Starting creation with:", {
+        problemListLength: problemList.length,
+        promptLength: prompt.length,
+        feedbackLength: feedback.length,
+      });
+
+      // parse problem list
+
+      const response = await fetch(`${BACKEND_URL}/api/create-solution-list`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          problemList,
+          prompt,
+          feedback,
+        }),
+      });
+
+      const result = await response.json();
+      console.log("[Solution List] API response:", {
+        success: result.success,
+        error: result.error,
+        dataLength: result.data?.solutionList?.length,
+      });
+
+      if (!result.success) {
+        console.error("[Solution List] Creation failed:", result.error);
+        throw new Error(result.error || "Failed to create solution list");
+        addMessage("Failed to create solution list!", "error");
+      }
+
+      const solutionListArray = result.data.solutionList;
+
+      localStorage.setItem("solutionList", JSON.stringify(solutionListArray));
+      addMessage("Successfully created solution list!", "success");
+
+      return solutionListArray;
+    };
+    /*
     const createChangeList = async (
       prompt: string,
       indexTree: string,
@@ -154,13 +273,13 @@ export default function Results() {
         throw new Error("Failed to parse change list JSON");
       }
     };
-
-    const applyChanges = async (changeList: ChangeItem[]) => {
+*/
+    const applyChanges = async (changeList: SolutionItem[]) => {
       console.log("[Apply Changes] Starting with:", {
         totalChanges: changeList.length,
-        changes: changeList.map((c: ChangeItem) => ({
+        changes: changeList.map((c: SolutionItem) => ({
           section: c.sectionToEdit,
-          instructionLength: c.changeInstructions.length,
+          instructionLength: c.howToEdit.length,
         })),
       });
 
@@ -172,6 +291,8 @@ export default function Results() {
             `Applying changes to section: ${change.sectionToEdit}...`,
             "info"
           );
+
+          addMessage(`How to edit: ${change.howToEdit}`, "info");
 
           const response = await fetch(`${BACKEND_URL}/api/apply-changes`, {
             method: "POST",
@@ -257,44 +378,46 @@ export default function Results() {
       setIsProcessing(true);
 
       try {
-        const storedPrompt = localStorage.getItem("voiceAgentPrompt");
-        const feedback = localStorage.getItem("feedback");
-        console.log("[Optimize] Retrieved stored data:", {
-          hasPrompt: !!storedPrompt,
-          promptLength: storedPrompt?.length,
-          hasFeedback: !!feedback,
-          feedbackLength: feedback?.length,
-        });
+        const storedPrompt = localStorage.getItem("voiceAgentPrompt") || "";
+        const feedback = localStorage.getItem("feedback") || "";
 
-        if (!mounted) return;
-
-        if (!storedPrompt || !feedback) {
-          console.error("[Optimize] Missing required data:", {
-            hasPrompt: !!storedPrompt,
-            hasFeedback: !!feedback,
-          });
-          addMessage("Error: Missing prompt or feedback data", "error");
-          return;
+        if (!validatePrompt(storedPrompt)) {
+          throw new Error("Invalid or empty prompt");
+        }
+        if (!validateFeedback(feedback)) {
+          throw new Error("Invalid or empty feedback");
         }
 
         // Step 1: Create Index Tree
         const newIndexTree = await createIndexTree(storedPrompt, feedback);
-
-        console.log("New Index Tree:\n", newIndexTree);
-
-        // Step 2: Create Change List
-        if (mounted && newIndexTree) {
-          const changeList = await createChangeList(
-            storedPrompt,
-            newIndexTree,
-            feedback
-          );
-
-          // Step 3: Apply Changes
-          if (mounted && changeList) {
-            await applyChanges(changeList);
-          }
+        if (!validateIndexTree(newIndexTree)) {
+          throw new Error("Invalid index tree format");
         }
+
+        console.log("Index Tree created:", newIndexTree);
+
+        // Step 2: Create Problem List
+        const newProblemList = await createProblemList(
+          storedPrompt,
+          newIndexTree,
+          feedback
+        );
+        if (!validateProblemList(newProblemList)) {
+          throw new Error("Invalid problem list format");
+        }
+
+        // Step 3: Create Solution List
+        const newSolutionList = await createSolutionList(
+          newProblemList,
+          storedPrompt,
+          feedback
+        );
+        if (!validateSolutionList(newSolutionList)) {
+          throw new Error("Invalid solution list format");
+        }
+
+        // Step 4: Apply Changes
+        await applyChanges(newSolutionList);
       } catch (error) {
         console.error("[Optimize] Error in process:", error);
         if (mounted) {

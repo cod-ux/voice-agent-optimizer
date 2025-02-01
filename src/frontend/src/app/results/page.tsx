@@ -5,18 +5,25 @@ import { useRouter } from "next/navigation";
 
 interface Change {
   sectionToEdit: string;
-  changeInstructions: string;
+  howToEdit: string;
+}
+
+interface Problem {
+  sectionToEdit: string;
+  whyToEdit: string;
 }
 
 export default function Results() {
   const [prompt, setPrompt] = useState<string>("");
   const [copied, setCopied] = useState(false);
   const [changes, setChanges] = useState<Change[]>([]);
+  const [problems, setProblems] = useState<Problem[]>([]);
   const router = useRouter();
 
   useEffect(() => {
     const storedPrompt = localStorage.getItem("voiceAgentPrompt");
-    const storedChanges = localStorage.getItem("changeList");
+    const storedChanges = localStorage.getItem("solutionList");
+    const storedProblems = localStorage.getItem("problemList");
     if (storedPrompt) {
       setPrompt(storedPrompt);
     }
@@ -25,6 +32,13 @@ export default function Results() {
         setChanges(JSON.parse(storedChanges));
       } catch (e) {
         console.error("Failed to parse changes:", e);
+      }
+    }
+    if (storedProblems) {
+      try {
+        setProblems(JSON.parse(storedProblems));
+      } catch (e) {
+        console.error("Failed to parse problems:", e);
       }
     }
   }, []);
@@ -139,7 +153,50 @@ export default function Results() {
               {changes.map((change, index) => (
                 <li key={index} className="text-gray-700">
                   <span className="font-semibold">{change.sectionToEdit}</span>:{" "}
-                  {change.changeInstructions}
+                  {change.howToEdit}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        <div className="collapse bg-white mt-4">
+          <input type="checkbox" />
+          <div className="collapse-title text-xl font-medium flex items-center gap-2">
+            <svg
+              className="w-5 h-5 collapse-plus"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+              />
+            </svg>
+            <svg
+              className="w-5 h-5 collapse-minus hidden"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M20 12H4"
+              />
+            </svg>
+            ProblemLog
+          </div>
+          <div className="collapse-content">
+            <ul className="list-disc pl-5 space-y-2">
+              {problems.map((problem, index) => (
+                <li key={index} className="text-gray-700">
+                  <span className="font-semibold">{problem.sectionToEdit}</span>
+                  : {problem.whyToEdit}
                 </li>
               ))}
             </ul>
