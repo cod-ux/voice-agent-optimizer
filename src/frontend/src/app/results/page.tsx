@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 interface Change {
   sectionToEdit: string;
-  howToEdit: string;
+  changeInstructions: string;
 }
 
 interface Problem {
@@ -153,7 +153,7 @@ export default function Results() {
               {changes.map((change, index) => (
                 <li key={index} className="text-gray-700">
                   <span className="font-semibold">{change.sectionToEdit}</span>:{" "}
-                  {change.howToEdit}
+                  {change.changeInstructions}
                 </li>
               ))}
             </ul>

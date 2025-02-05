@@ -17,7 +17,7 @@ interface ProblemItem {
 
 interface SolutionItem {
   sectionToEdit: string;
-  howToEdit: string;
+  changeInstructions: string;
 }
 
 // Backend API configuration
@@ -132,7 +132,7 @@ export default function Results() {
       console.log("[Problem List] API response:", {
         success: result.success,
         error: result.error,
-        dataLength: result.data?.problemList?.length,
+        dataLength: result.data?.planToEdit?.length,
       });
 
       if (!result.success) {
@@ -140,23 +140,23 @@ export default function Results() {
         throw new Error(result.error || "Failed to create problem list");
       }
 
-      // parse problem list
-      const { problemList } = result.data;
+      // parse planToEdit
+      const { planToEdit } = result.data;
       console.log("[Problem List] API returned:", {
-        problemListLength: problemList?.length,
-        problemListType: typeof problemList,
-        problemList: problemList,
+        planLength: planToEdit?.length,
+        planType: typeof planToEdit,
+        plan: planToEdit,
       });
 
-      // The problemList is already an object, no need to parse it
-      const problemListArray = Array.isArray(problemList) ? problemList : [];
+      // The plan is already an object, no need to parse it
+      const problemListArray = Array.isArray(planToEdit) ? planToEdit : [];
 
       if (!problemListArray.length) {
         console.error(
           "[Problem List] Invalid or empty problem list:",
-          problemList
+          planToEdit
         );
-        throw new Error("Failed to get valid problem list");
+        throw new Error("Failed to get valid plan");
       }
 
       localStorage.setItem("problemList", JSON.stringify(problemListArray));
@@ -185,7 +185,7 @@ export default function Results() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          problemList,
+          plan: problemList,
           prompt,
           feedback,
         }),
@@ -195,7 +195,7 @@ export default function Results() {
       console.log("[Solution List] API response:", {
         success: result.success,
         error: result.error,
-        dataLength: result.data?.solutionList?.length,
+        dataLength: result.data.planToChange.length,
       });
 
       if (!result.success) {
@@ -204,12 +204,29 @@ export default function Results() {
         addMessage("Failed to create solution list!", "error");
       }
 
-      const solutionListArray = result.data.solutionList;
+      const { planToChange } = result.data;
+      console.log("[Solution List] API returned:", {
+        planLength: planToChange?.length,
+        planType: typeof planToChange,
+        plan: planToChange,
+      });
 
-      localStorage.setItem("solutionList", JSON.stringify(solutionListArray));
+      if (
+        !planToChange ||
+        !Array.isArray(planToChange) ||
+        !planToChange.length
+      ) {
+        console.error(
+          "[Solution List] Invalid or empty solution plan:",
+          planToChange
+        );
+        throw new Error("Failed to get valid solution plan");
+      }
+
+      localStorage.setItem("solutionList", JSON.stringify(planToChange));
       addMessage("Successfully created solution list!", "success");
 
-      return solutionListArray;
+      return planToChange;
     };
     /*
     const createChangeList = async (
@@ -279,7 +296,7 @@ export default function Results() {
         totalChanges: changeList.length,
         changes: changeList.map((c: SolutionItem) => ({
           section: c.sectionToEdit,
-          instructionLength: c.howToEdit.length,
+          instructionLength: c.changeInstructions.length,
         })),
       });
 
@@ -292,7 +309,7 @@ export default function Results() {
             "info"
           );
 
-          addMessage(`How to edit: ${change.howToEdit}`, "info");
+          addMessage(`How to edit: ${change.changeInstructions}`, "info");
 
           const response = await fetch(`${BACKEND_URL}/api/apply-changes`, {
             method: "POST",
@@ -337,13 +354,15 @@ export default function Results() {
           });
 
           if (!result.success) {
-            addMessage(
-              `Failed to apply changes to section: ${change.sectionToEdit} - ${
-                result.error || "Unknown error"
-              }`,
-              "error"
-            );
-            throw new Error(result.error || "Failed to apply change");
+            const errorMsg = `Failed to apply changes to section: ${change.sectionToEdit} - ${
+              result.error || "Unknown error"
+            }`;
+            console.error("[Apply Changes] Error:", {
+              section: change.sectionToEdit,
+              error: result.error,
+            });
+            addMessage(errorMsg, "error");
+            return; // Don't throw, just return to allow the message to be shown
           }
 
           addMessage(
@@ -407,6 +426,11 @@ export default function Results() {
         }
 
         // Step 3: Create Solution List
+
+        console.log("Problem List check:", newProblemList);
+        console.log("Prompt check:", storedPrompt);
+        console.log("Feedback check:", feedback);
+
         const newSolutionList = await createSolutionList(
           newProblemList,
           storedPrompt,

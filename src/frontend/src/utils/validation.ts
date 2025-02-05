@@ -4,7 +4,7 @@ export interface ProblemItem {
 
 export interface SolutionItem {
   sectionToEdit: string;
-  howToEdit: string;
+  changeInstructions: string;
 }
 
 export function validatePrompt(prompt: string): boolean {
@@ -24,18 +24,16 @@ export function validateFeedback(feedback: string): boolean {
 export function validateIndexTree(indexTree: string): boolean {
   try {
     const parsed = JSON.parse(indexTree);
-    return !!parsed && typeof parsed === 'object';
+    return !!parsed && typeof parsed === "object";
   } catch {
     return false;
   }
 }
 
-export function validateProblemList(problemList: ProblemItem[]): boolean {
-  if (!Array.isArray(problemList)) return false;
-  return problemList.every(
-    (item) =>
-      item.sectionToEdit &&
-      typeof item.sectionToEdit === 'string'
+export function validateProblemList(plan: ProblemItem[]): boolean {
+  if (!Array.isArray(plan)) return false;
+  return plan.every(
+    (item) => item.sectionToEdit && typeof item.sectionToEdit === "string"
   );
 }
 
@@ -44,8 +42,8 @@ export function validateSolutionList(solutionList: SolutionItem[]): boolean {
   return solutionList.every(
     (item) =>
       item.sectionToEdit &&
-      item.howToEdit &&
-      typeof item.sectionToEdit === 'string' &&
-      typeof item.howToEdit === 'string'
+      item.changeInstructions &&
+      typeof item.sectionToEdit === "string" &&
+      typeof item.changeInstructions === "string"
   );
 }

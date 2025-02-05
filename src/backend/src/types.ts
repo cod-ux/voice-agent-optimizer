@@ -79,7 +79,7 @@ export interface Problem {
 
 export interface Solution {
   sectionToEdit: string;
-  howToEdit: string;
+  changeInstructions: string;
 }
 
 export interface CreateProblemListRequest {
@@ -89,15 +89,15 @@ export interface CreateProblemListRequest {
 }
 
 export interface CreateProblemListResponse {
-  problemList: Problem[];
+  planToEdit: Problem[];
 }
 
 export interface CreateSolutionListRequest {
-  problemList: Problem[];
+  plan: Problem[];
   prompt: string;
   feedback: string;
 }
 
 export interface CreateSolutionListResponse {
-  solutionList: Solution[];
+  planToChange: Solution[];
 }

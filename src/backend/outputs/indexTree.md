@@ -1,104 +1,236 @@
 
 [
   {
-    "sectionName": "OriginalPrompt",
+    "sectionName": "Root",
     "start": 1,
-    "end": 539,
-    "xmlHeading": true,
+    "end": 1114,
+    "xmlHeading": false,
     "children": [
       {
         "sectionName": "TrainingDocument",
-        "start": 33,
-        "end": 495,
+        "start": 32,
+        "end": 1084,
         "xmlHeading": true,
         "children": [
           {
-            "sectionName": "GoalOfCall",
-            "start": 35,
-            "end": 50,
+            "sectionName": "GoalCompleted",
+            "start": 34,
+            "end": 38,
+            "xmlHeading": true
+          },
+          {
+            "sectionName": "CallObjective",
+            "start": 40,
+            "end": 47,
             "xmlHeading": true
           },
           {
             "sectionName": "TemplatedVariables",
-            "start": 52,
-            "end": 62,
+            "start": 49,
+            "end": 54,
+            "xmlHeading": true
+          },
+          {
+            "sectionName": "PronunciationRules",
+            "start": 56,
+            "end": 60,
             "xmlHeading": true
           },
           {
             "sectionName": "CallFlow",
-            "start": 64,
-            "end": 85,
+            "start": 62,
+            "end": 98,
             "xmlHeading": true
           },
           {
-            "sectionName": "HowToScheduleATrialSession",
-            "start": 87,
-            "end": 101,
+            "sectionName": "GetToKnowQuestions",
+            "start": 100,
+            "end": 106,
             "xmlHeading": true
           },
           {
-            "sectionName": "KnowledgeBase",
-            "start": 103,
-            "end": 355,
+            "sectionName": "RulesForSuccess",
+            "start": 108,
+            "end": 119,
+            "xmlHeading": true
+          },
+          {
+            "sectionName": "HowToBookMeetings",
+            "start": 121,
+            "end": 130,
+            "xmlHeading": true
+          },
+          {
+            "sectionName": "ObjectionHandling",
+            "start": 132,
+            "end": 164,
             "xmlHeading": true,
             "children": [
               {
-                "sectionName": "ContextOnMPACSports",
-                "start": 106,
-                "end": 120,
-                "xmlHeading": true
+                "sectionName": "ObjectionHandlingWhenTheyAreNotInterested",
+                "start": 140,
+                "end": 150,
+                "xmlHeading": false
               },
               {
-                "sectionName": "MPACCenterLocation",
-                "start": 122,
-                "end": 135,
-                "xmlHeading": true
-              },
-              {
-                "sectionName": "ProgramDetails",
-                "start": 137,
-                "end": 290,
-                "xmlHeading": true
+                "sectionName": "ObjectionHandlingWhenTheyRealizeTheirBudgetIsTooLow",
+                "start": 152,
+                "end": 160,
+                "xmlHeading": false
               }
             ]
           },
           {
-            "sectionName": "ObjectionHandling",
-            "start": 359,
-            "end": 378,
-            "xmlHeading": true
-          },
-          {
-            "sectionName": "QualificationCriteria",
-            "start": 380,
-            "end": 407,
-            "xmlHeading": true
-          },
-          {
-            "sectionName": "OtherQuestionsAndAnswers",
-            "start": 409,
-            "end": 416,
-            "xmlHeading": true
-          },
-          {
-            "sectionName": "AdditionalRules",
-            "start": 418,
-            "end": 458,
-            "xmlHeading": true
-          },
-          {
-            "sectionName": "Objective",
-            "start": 460,
-            "end": 470,
-            "xmlHeading": true
-          },
-          {
-            "sectionName": "CallFlowRestatement",
-            "start": 472,
-            "end": 493,
-            "xmlHeading": true
+            "sectionName": "DetailedKnowledgeBase",
+            "start": 166,
+            "end": 1023,
+            "xmlHeading": true,
+            "children": [
+              {
+                "sectionName": "AboutDarGlobal",
+                "start": 167,
+                "end": 228,
+                "xmlHeading": true
+              },
+              {
+                "sectionName": "ConsolidatedFactsheet",
+                "start": 230,
+                "end": 328,
+                "xmlHeading": true
+              },
+              {
+                "sectionName": "RealEstateTerms",
+                "start": 330,
+                "end": 365,
+                "xmlHeading": true
+              },
+              {
+                "sectionName": "PropertiesInOman",
+                "start": 368,
+                "end": 673,
+                "xmlHeading": true,
+                "children": [
+                  {
+                    "sectionName": "NeptuneVilla",
+                    "start": 369,
+                    "end": 468,
+                    "xmlHeading": true
+                  },
+                  {
+                    "sectionName": "TheGreatEscape",
+                    "start": 469,
+                    "end": 592,
+                    "xmlHeading": true
+                  },
+                  {
+                    "sectionName": "CoastalVillas",
+                    "start": 594,
+                    "end": 671,
+                    "xmlHeading": true
+                  }
+                ]
+              },
+              {
+                "sectionName": "PropertiesInQatar",
+                "start": 676,
+                "end": 712,
+                "xmlHeading": true,
+                "children": [
+                  {
+                    "sectionName": "LesVagues",
+                    "start": 677,
+                    "end": 711,
+                    "xmlHeading": true
+                  }
+                ]
+              },
+              {
+                "sectionName": "PropertiesInDubai",
+                "start": 715,
+                "end": 891,
+                "xmlHeading": true,
+                "children": [
+                  {
+                    "sectionName": "DG1",
+                    "start": 716,
+                    "end": 779,
+                    "xmlHeading": true
+                  },
+                  {
+                    "sectionName": "UrbanOasis",
+                    "start": 781,
+                    "end": 829,
+                    "xmlHeading": true
+                  },
+                  {
+                    "sectionName": "DaVinciTowerByPagain",
+                    "start": 830,
+                    "end": 890,
+                    "xmlHeading": true
+                  }
+                ]
+              },
+              {
+                "sectionName": "PropertiesInRasAlKhaima",
+                "start": 893,
+                "end": 946,
+                "xmlHeading": true,
+                "children": [
+                  {
+                    "sectionName": "TheAstera",
+                    "start": 894,
+                    "end": 945,
+                    "xmlHeading": true
+                  }
+                ]
+              },
+              {
+                "sectionName": "PropertiesInSpain",
+                "start": 948,
+                "end": 1022,
+                "xmlHeading": true,
+                "children": [
+                  {
+                    "sectionName": "Marea",
+                    "start": 949,
+                    "end": 991,
+                    "xmlHeading": true
+                  },
+                  {
+                    "sectionName": "TierraViva",
+                    "start": 993,
+                    "end": 1021,
+                    "xmlHeading": false
+                  }
+                ]
+              }
+            ]
           }
         ]
+      },
+      {
+        "sectionName": "CallObjectiveRestatement",
+        "start": 1025,
+        "end": 1032,
+        "xmlHeading": true
+      },
+      {
+        "sectionName": "PronunciationRulesRestatement",
+        "start": 1034,
+        "end": 1038,
+        "xmlHeading": true
+      },
+      {
+        "sectionName": "CallFlowRestatement",
+        "start": 1040,
+        "end": 1076,
+        "xmlHeading": true
+      },
+      {
+        "sectionName": "GoalCompletedRestatement",
+        "start": 1078,
+        "end": 1082,
+        "xmlHeading": false
       }
     ]
   }

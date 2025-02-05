@@ -52,12 +52,12 @@ It also fails when giving info blandly like I dont want it to ask about target m
 
 -> But we know we are going to stick to this method and optimise it.
 
-#### Product Issues
+### Features to Add for MVP to be ready:
 
-- Rule (changeList): Don't add repetitive dialogues or dialogues where it is not necessary to implement feedback. (edited, not tested)
-- Need to group feedback into bunches to create seperate tasks.
-- Can try to split problem identification and rewriting section (OR)
-- Can try to make index trees more detailed, create a list of problem areas, then a bunch of concurrent calls to create change instructions for each of them. And then use applyChange (OR)
-- Can try to make index trees more detailed, create a list of mini problem areas, and use applyChange to fix the problem areas based on feedback and ogPrompt (OR)
-- Can try to make index trees more detailed, create a problems list, then create a solutions list and then can apply changes one by one (OR)
-- Can try to make index trees more detailed, create changeList with reasoning model instead and then can apply changes one by one.
+1. Group tasks to be run at each round
+2. Input template that adds tasks (ideal behaviour/current behaviour examples -optional) - possible, but there is an ease to effeciency trade off. Also haven't tested if this +vely impacts product's output, but it gives detailed examples, so should definitely be better to work with.
+3. Add a preliminary task to check for unique section names, if not rename duplicates.
+4. Need to document changes
+5. Need to add feature to re-optimize prompt with additional feedback.
+
+Goal of MVP is to check if there is a need for an AI prompt engineer in the voice agents vertical and also if it is technically possible to build one with good quality.
