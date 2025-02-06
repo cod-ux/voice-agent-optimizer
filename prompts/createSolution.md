@@ -37,74 +37,24 @@ Provide only the following JSON structure, with no extra commentary:
 }
 ```
 
-## Types of Feedback
+## Types of Feedback and How to Handle them
 
-You may encounter feedback that falls into one or more of the following categories:
+| **Type of Feedback**                        | **What It Means**                                                                                                         | **Correct Sections to Edit**                                                                                                                                                                                                                                                                                                                                                        |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **1. Recognition or Understanding Issues**  | AI fails to recognize specific words, phrases, or the user’s intent.                                                      | - Knowledge Base : For adding or clarifying domain-specific or technical terminology.<br/>- Rules (or any global rules section from <IndexTree>): If the misunderstanding stems from incomplete or conflicting global instructions.<br/>- **Avoid** editing `CallFlow` or adding new dialogues unless specifically requested.                                                       |
+| **2. Misinterpretation or Wrong Inference** | AI recognizes the input but draws an incorrect conclusion.                                                                | - Rules for success (or similar rules/guidelines section): To clarify correct logic or interpretation.<br/>- Knowledge Base (or similar knowledge base sections): If new context or definitions are needed to fix inference errors (e.g., clarifying property details that the AI misunderstood).                                                                                   |
+| **3. Call Flow or Procedure Issues**        | AI follows the wrong conversation sequence, or skips/duplicates steps in the flow.                                        | - CallFlow or CallFlow Restatement (or any section detailing the conversation flow): To modify conversation sequence or add a missing step.<br/>- Questions to ask (or any section that has a list of questions to ask the customer): Only if you need to adjust or add get-to-know questions relevant to the flow change.                                                          |
+| **4. Missing or Incomplete Information**    | AI forgets key data points it should collect (e.g., user’s name, email), or lacks certain details (e.g., property specs). | - Knowledge Base : If the missing info is new factual/contextual data that should be recognized.<br/>- CallFlow or Call flow restatement (or any section detailing the conversation flow): If the AI needs to start asking for (or verifying) that missing info in the conversation sequence.                                                                                       |
+| **5. Formatting or Output Clarity Issues**  | AI uses unclear formatting or unnatural text (e.g., spelling out “U-S-D”).                                                | - Rules for success (or a similar global formatting section): To specify standard output/formatting guidelines.<br/>- **Avoid** changing other sections unless the feedback specifically mentions them.                                                                                                                                                                             |
+| **6. Pitch or Content Expansion**           | AI’s script is missing crucial selling points or new marketing content.                                                   | - CallFlow or CallFlow Restatement: If you must incorporate additional talking points directly into the conversation flow.<br/>- Knowledge Base (or any section detailing domain-specific facts): If you need to store and reference new property or brand details.<br/>- Rules for success (or core guidelines): If it’s a system-wide requirement to always mention certain USPs. |
+| **7. Pronunciation Issues**                 | AI mispronounces words or phrases, especially brand names or location names.                                              | - PronunciationRules or PronunciationRulesRestatement (or any section detailing how to pronounce terms): To add/correct how terms should be pronounced.<br/>- Rules For Success (or global guidelines): If it’s a broader, system-wide adjustment for all calls.                                                                                                                    |
+| **8. Other / Miscellaneous**                | Feedback that doesn’t neatly fit into any category above.                                                                 | - Check relevant sections: Based on the nature of the feedback. If it’s domain-specific, consider knowledge base related sections; if it’s a process issue, consider CallFlow, etc.                                                                                                                                                                                                 |
 
-1. **Recognition or Understanding Issues**
-
-   - The AI fails to recognize particular words, phrases, or intent.
-
-2. **Misinterpretation or Wrong Inference**
-
-   - The AI recognizes the input but draws an incorrect conclusion.
-
-3. **Call Flow or Procedure Issues**
-
-   - The AI follows the wrong conversation sequence or skips essential steps.
-
-4. **Missing or Incomplete Information**
-
-   - The AI forgets to gather key pieces of data (e.g., email, name, etc.).
-
-5. **Formatting or Output Clarity Issues**
-
-   - The AI uses unclear or unnatural formatting (e.g., spelling out “U-S-D”).
-
-6. **Pitch or Content Expansion**
-
-   - The AI’s script is missing crucial selling points or new content.
-
-7. **Pronunciation Issues**
-
-   - The AI fails to pronounce words or phrases correctly.
-
-8. **Other / Miscellaneous**
-   - Any feedback that doesn’t cleanly fit the above categories.
-
-## IMPORTANT NOTE: For sectionToEdit, use exactly the name of the section from the <SectionNameFromIndexTree>. Do NOT create new sections. Don't add suffixes or prefixes like ' - Section'. Just return the exact name of the section mentioned in the index tree.
-
----
-
-### Mapping Feedback to Sections
-
-Use this guide to determine which sections to modify based on the feedback type. Always favor minimal and targeted edits.
-
-1. Recognition or Understanding Issues
-   • Knowledge bases: Add or clarify terminology that the AI should recognize.
-   • rules or guideline related sections: If the misunderstanding is due to incomplete or conflicting global instructions.
-   • Avoid adding new dialogues or ask new questions unless absolutely necessary or mentioned in the feedback.
-2. Misinterpretation or Wrong Inference
-   • rules, guidelines, or agent Persona related sections: Add or adjust instructions to clarify correct logic or interpretation.
-   • Knowledge base sections: If new context or definitions are required to fix inference issues.
-3. Call Flow or Procedure Issues
-   • callFlow, callFlow Restatement, or dialogueExamples related sections: Modify the conversation sequence or add missing steps.
-   • Ensure changes are mirrored in any restatement sections.
-4. Missing or Incomplete Information
-   • Knowledge base sections: If new data fields or definitions are needed.
-   • callFlow: If the AI must prompt for missing information in the conversation.
-5. Formatting or Output Clarity Issues
-   • rules, coreGuidelines: Add or modify formatting preferences or standard output guidelines.
-6. Pitch or Content Expansion
-   • dialogue examples, callFlow sections: Incorporate new sales points or product details into the script.
-   • rules or important guidelines: if it’s a system-wide change in messaging.
-7. Pronunciation Issues
-   • pronunciation rules section or closest parent section: Edit the pronunciation rules to correct the issue.
-   • rules or important guidelines: if it’s a system-wide change in messaging.
-8. Other / Miscellaneous
-   • Check any relevant sections based on the nature of the feedback.
-
-## IMPORTANT NOTE: For sectionToEdit, use exactly the name of the section from the <SectionNameFromIndexTree>. Do NOT create new sections. Don't add suffixes or prefixes like ' - Section'. Just return the exact name of the section mentioned in the index tree.
+> **Important Reminders**
+>
+> - Whenever the feedback involves **new or unrecognized domain-specific phrases**, add them to the existing `DetailedKnowledgeBase`.
+> - For **Call Flow or Procedure** changes, update both the main flow and any restatement section for consistency.
+> - Use **only** the sections from your <SectionNameFromIndexTree> in theJSON output.
 
 ### Guidelines on Choosing Sections
 

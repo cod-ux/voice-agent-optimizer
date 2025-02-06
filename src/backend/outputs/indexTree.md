@@ -3,13 +3,19 @@
   {
     "sectionName": "Root",
     "start": 1,
-    "end": 1114,
+    "end": 1087,
     "xmlHeading": false,
     "children": [
       {
+        "sectionName": "RootCoreInstructions",
+        "start": 1,
+        "end": 31,
+        "xmlHeading": false
+      },
+      {
         "sectionName": "TrainingDocument",
         "start": 32,
-        "end": 1084,
+        "end": 1057,
         "xmlHeading": true,
         "children": [
           {
@@ -64,143 +70,129 @@
             "sectionName": "ObjectionHandling",
             "start": 132,
             "end": 164,
-            "xmlHeading": true,
-            "children": [
-              {
-                "sectionName": "ObjectionHandlingWhenTheyAreNotInterested",
-                "start": 140,
-                "end": 150,
-                "xmlHeading": false
-              },
-              {
-                "sectionName": "ObjectionHandlingWhenTheyRealizeTheirBudgetIsTooLow",
-                "start": 152,
-                "end": 160,
-                "xmlHeading": false
-              }
-            ]
+            "xmlHeading": true
           },
           {
             "sectionName": "DetailedKnowledgeBase",
-            "start": 166,
-            "end": 1023,
+            "start": 167,
+            "end": 995,
             "xmlHeading": true,
             "children": [
               {
                 "sectionName": "AboutDarGlobal",
-                "start": 167,
-                "end": 228,
+                "start": 168,
+                "end": 229,
                 "xmlHeading": true
               },
               {
                 "sectionName": "ConsolidatedFactsheet",
-                "start": 230,
-                "end": 328,
+                "start": 231,
+                "end": 329,
                 "xmlHeading": true
               },
               {
-                "sectionName": "RealEstateTerms",
-                "start": 330,
-                "end": 365,
+                "sectionName": "CommonRealEstateTerminologies",
+                "start": 331,
+                "end": 336,
                 "xmlHeading": true
               },
               {
                 "sectionName": "PropertiesInOman",
-                "start": 368,
-                "end": 673,
+                "start": 339,
+                "end": 647,
                 "xmlHeading": true,
                 "children": [
                   {
                     "sectionName": "NeptuneVilla",
-                    "start": 369,
-                    "end": 468,
+                    "start": 340,
+                    "end": 439,
                     "xmlHeading": true
                   },
                   {
                     "sectionName": "TheGreatEscape",
-                    "start": 469,
-                    "end": 592,
+                    "start": 440,
+                    "end": 563,
                     "xmlHeading": true
                   },
                   {
                     "sectionName": "CoastalVillas",
-                    "start": 594,
-                    "end": 671,
+                    "start": 565,
+                    "end": 645,
                     "xmlHeading": true
                   }
                 ]
               },
               {
                 "sectionName": "PropertiesInQatar",
-                "start": 676,
-                "end": 712,
+                "start": 649,
+                "end": 685,
                 "xmlHeading": true,
                 "children": [
                   {
                     "sectionName": "LesVagues",
-                    "start": 677,
-                    "end": 711,
+                    "start": 650,
+                    "end": 684,
                     "xmlHeading": true
                   }
                 ]
               },
               {
                 "sectionName": "PropertiesInDubai",
-                "start": 715,
-                "end": 891,
+                "start": 688,
+                "end": 864,
                 "xmlHeading": true,
                 "children": [
                   {
-                    "sectionName": "DG1",
-                    "start": 716,
-                    "end": 779,
+                    "sectionName": "D G 1",
+                    "start": 689,
+                    "end": 752,
                     "xmlHeading": true
                   },
                   {
                     "sectionName": "UrbanOasis",
-                    "start": 781,
-                    "end": 829,
+                    "start": 754,
+                    "end": 802,
                     "xmlHeading": true
                   },
                   {
-                    "sectionName": "DaVinciTowerByPagain",
-                    "start": 830,
-                    "end": 890,
+                    "sectionName": "DaVinciTowerByPagani",
+                    "start": 803,
+                    "end": 863,
                     "xmlHeading": true
                   }
                 ]
               },
               {
                 "sectionName": "PropertiesInRasAlKhaima",
-                "start": 893,
-                "end": 946,
+                "start": 865,
+                "end": 918,
                 "xmlHeading": true,
                 "children": [
                   {
                     "sectionName": "TheAstera",
-                    "start": 894,
-                    "end": 945,
+                    "start": 866,
+                    "end": 917,
                     "xmlHeading": true
                   }
                 ]
               },
               {
                 "sectionName": "PropertiesInSpain",
-                "start": 948,
-                "end": 1022,
+                "start": 920,
+                "end": 994,
                 "xmlHeading": true,
                 "children": [
                   {
                     "sectionName": "Marea",
-                    "start": 949,
-                    "end": 991,
+                    "start": 921,
+                    "end": 963,
                     "xmlHeading": true
                   },
                   {
                     "sectionName": "TierraViva",
-                    "start": 993,
-                    "end": 1021,
-                    "xmlHeading": false
+                    "start": 965,
+                    "end": 993,
+                    "xmlHeading": true
                   }
                 ]
               }
@@ -210,27 +202,27 @@
       },
       {
         "sectionName": "CallObjectiveRestatement",
-        "start": 1025,
-        "end": 1032,
+        "start": 998,
+        "end": 1005,
         "xmlHeading": true
       },
       {
         "sectionName": "PronunciationRulesRestatement",
-        "start": 1034,
-        "end": 1038,
+        "start": 1007,
+        "end": 1011,
         "xmlHeading": true
       },
       {
         "sectionName": "CallFlowRestatement",
-        "start": 1040,
-        "end": 1076,
+        "start": 1013,
+        "end": 1049,
         "xmlHeading": true
       },
       {
         "sectionName": "GoalCompletedRestatement",
-        "start": 1078,
-        "end": 1082,
-        "xmlHeading": false
+        "start": 1051,
+        "end": 1055,
+        "xmlHeading": true
       }
     ]
   }

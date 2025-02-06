@@ -162,6 +162,12 @@ export default function Results() {
       localStorage.setItem("problemList", JSON.stringify(problemListArray));
       addMessage("Successfully created problem list!", "success");
 
+      // Display sections to be edited
+      addMessage("Sections that will be edited:", "info");
+      problemListArray.forEach((problem) => {
+        addMessage(`- ${problem.sectionToEdit}`, "info");
+      });
+
       return problemListArray;
     };
 
