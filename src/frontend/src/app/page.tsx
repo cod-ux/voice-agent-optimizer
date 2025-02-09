@@ -52,6 +52,7 @@ export default function Home() {
         >
           Next
         </button>
+        <a href="/landing" className="ml-4">Go to Landing Page</a>
       </div>
     </div>
   );

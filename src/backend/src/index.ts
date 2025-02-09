@@ -207,52 +207,83 @@ async function createProblemList(
   feedback: string
 ): Promise<Problem[]> {
   try {
-    console.log("[createChangeList] Starting with inputs:", {
+    // Validate inputs
+    if (!indexTree || !prompt || !feedback) {
+      throw new Error("Missing required inputs");
+    }
+
+    console.log("[createProblemList] Starting with inputs:", {
       promptLength: prompt.length,
       indexTreeLength: indexTree.length,
       feedbackLength: feedback.length,
     });
+
+    // Load prompt template
+    console.log("[createProblemList] Loading prompt template...");
+    const createProblemListPromptFilePath = path.join(
+      __dirname,
+      "..",
+      "..",
+      "..",
+      "prompts",
+      "createProblemList.md"
+    );
+
+    let createProblemListPrompt: string;
+    try {
+      createProblemListPrompt = readFileSync(
+        createProblemListPromptFilePath,
+        "utf-8"
+      );
+    } catch (error) {
+      console.error(
+        "[createProblemList] Error loading prompt template:",
+        error
+      );
+      throw new Error("Failed to load prompt template");
+    }
+
+    // Fill prompt template
+    console.log("[createProblemList] Filling prompt template...");
+    const filledCreateProblemListPrompt = createProblemListPrompt
+      .replace("{indexTree}", indexTree)
+      .replace("{feedback}", feedback)
+      .replace("{ogPrompt}", prompt);
+
+    // Call OpenAI API
+    console.log("[createProblemList] Calling OpenAI API...");
+    const changeListBuffer = await client.beta.chat.completions.parse({
+      model: "gpt-4o",
+      messages: [{ role: "user", content: filledCreateProblemListPrompt }],
+      response_format: zodResponseFormat(problemListSchema, "problem_list"),
+    });
+
+    // Parse the JSON response
+    const parsedResponse = JSON.parse(
+      changeListBuffer.choices[0].message.content || "{}"
+    );
+    console.log("[createProblemList] Raw response:", parsedResponse);
+
+    // Validate response
+    if (!parsedResponse?.planToEdit) {
+      console.error(
+        "[createProblemList] Missing planToEdit in response:",
+        parsedResponse
+      );
+      throw new Error("Invalid response from OpenAI API: Missing planToEdit");
+    }
+
+    console.log("[createProblemList] Found plan:", parsedResponse.planToEdit);
+
+    console.log("[createProblemList] Success, returning plan");
+    return parsedResponse.planToEdit;
   } catch (error) {
-    console.error("[createChangeList] Error:", {
+    console.error("[createProblemList] Error:", {
       error,
       message: error instanceof Error ? error.message : "Unknown error",
     });
     throw error;
   }
-
-  console.log("Creating problems list...");
-  const createProblemListPromptFilePath = path.join(
-    __dirname,
-    "..",
-    "..",
-    "..",
-    "prompts",
-    "createProblemList.md"
-  );
-  const createProblemListPrompt = readFileSync(
-    createProblemListPromptFilePath,
-    "utf-8"
-  );
-
-  const filledCreateProblemListPrompt = createProblemListPrompt
-    .replace("{indexTree}", indexTree)
-    .replace("{feedback}", feedback)
-    .replace("{ogPrompt}", prompt);
-
-  const changeListBuffer = await client.beta.chat.completions.parse({
-    model: "gpt-4o",
-    messages: [{ role: "user", content: filledCreateProblemListPrompt }],
-    response_format: zodResponseFormat(problemListSchema, "problem_list"),
-  });
-
-  const plan = changeListBuffer.choices[0].message.parsed;
-  console.log("Step 2: Saving plan to file");
-
-  if (!plan) {
-    throw new Error("Invalid response from LLM: Missing content.");
-  }
-
-  return plan.planToEdit;
 }
 
 async function createSolutionList(
@@ -770,25 +801,25 @@ app.post("/api/apply-changes", async (req, res): Promise<void> => {
 
     if (result.result.success) {
       console.log("[/api/apply-changes] Change applied successfully:", {
-        section: change.sectionToEdit
+        section: change.sectionToEdit,
       });
     } else {
       console.log("[/api/apply-changes] Change failed:", {
         section: change.sectionToEdit,
-        error: result.result.error
+        error: result.result.error,
       });
     }
 
     res.json({
       success: result.result.success,
       data: result,
-      error: result.result.error
+      error: result.result.error,
     });
   } catch (error) {
     console.error("[/api/apply-changes] Error:", {
       error,
       message: error instanceof Error ? error.message : "Unknown error",
-      section: change?.sectionToEdit
+      section: change?.sectionToEdit,
     });
     res.status(500).json({
       success: false,

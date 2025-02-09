@@ -1,228 +1,184 @@
 
 [
   {
-    "sectionName": "Root",
+    "sectionName": "OriginalPrompt",
     "start": 1,
-    "end": 1087,
-    "xmlHeading": false,
+    "end": 147,
+    "xmlHeading": true,
     "children": [
       {
-        "sectionName": "RootCoreInstructions",
+        "sectionName": "CustomerServiceAssistantPrompt",
         "start": 1,
-        "end": 31,
-        "xmlHeading": false
-      },
-      {
-        "sectionName": "TrainingDocument",
-        "start": 32,
-        "end": 1057,
-        "xmlHeading": true,
+        "end": 147,
+        "xmlHeading": false,
         "children": [
           {
-            "sectionName": "GoalCompleted",
-            "start": 34,
-            "end": 38,
-            "xmlHeading": true
+            "sectionName": "CoreIdentityAndPurpose",
+            "start": 3,
+            "end": 5,
+            "xmlHeading": false
           },
           {
-            "sectionName": "CallObjective",
-            "start": 40,
-            "end": 47,
-            "xmlHeading": true
+            "sectionName": "PrimaryObjectives",
+            "start": 6,
+            "end": 11,
+            "xmlHeading": false
           },
           {
-            "sectionName": "TemplatedVariables",
-            "start": 49,
-            "end": 54,
-            "xmlHeading": true
-          },
-          {
-            "sectionName": "PronunciationRules",
-            "start": 56,
-            "end": 60,
-            "xmlHeading": true
-          },
-          {
-            "sectionName": "CallFlow",
-            "start": 62,
-            "end": 98,
-            "xmlHeading": true
-          },
-          {
-            "sectionName": "GetToKnowQuestions",
-            "start": 100,
-            "end": 106,
-            "xmlHeading": true
-          },
-          {
-            "sectionName": "RulesForSuccess",
-            "start": 108,
-            "end": 119,
-            "xmlHeading": true
-          },
-          {
-            "sectionName": "HowToBookMeetings",
-            "start": 121,
-            "end": 130,
-            "xmlHeading": true
-          },
-          {
-            "sectionName": "ObjectionHandling",
-            "start": 132,
-            "end": 164,
-            "xmlHeading": true
-          },
-          {
-            "sectionName": "DetailedKnowledgeBase",
-            "start": 167,
-            "end": 995,
-            "xmlHeading": true,
+            "sectionName": "BehavioralGuidelines",
+            "start": 13,
+            "end": 37,
+            "xmlHeading": false,
             "children": [
               {
-                "sectionName": "AboutDarGlobal",
-                "start": 168,
-                "end": 229,
-                "xmlHeading": true
+                "sectionName": "ToneAndCommunicationStyle",
+                "start": 15,
+                "end": 21,
+                "xmlHeading": false
               },
               {
-                "sectionName": "ConsolidatedFactsheet",
-                "start": 231,
-                "end": 329,
-                "xmlHeading": true
+                "sectionName": "InformationGathering",
+                "start": 23,
+                "end": 29,
+                "xmlHeading": false
               },
               {
-                "sectionName": "CommonRealEstateTerminologies",
-                "start": 331,
-                "end": 336,
-                "xmlHeading": true
-              },
-              {
-                "sectionName": "PropertiesInOman",
-                "start": 339,
-                "end": 647,
-                "xmlHeading": true,
-                "children": [
-                  {
-                    "sectionName": "NeptuneVilla",
-                    "start": 340,
-                    "end": 439,
-                    "xmlHeading": true
-                  },
-                  {
-                    "sectionName": "TheGreatEscape",
-                    "start": 440,
-                    "end": 563,
-                    "xmlHeading": true
-                  },
-                  {
-                    "sectionName": "CoastalVillas",
-                    "start": 565,
-                    "end": 645,
-                    "xmlHeading": true
-                  }
-                ]
-              },
-              {
-                "sectionName": "PropertiesInQatar",
-                "start": 649,
-                "end": 685,
-                "xmlHeading": true,
-                "children": [
-                  {
-                    "sectionName": "LesVagues",
-                    "start": 650,
-                    "end": 684,
-                    "xmlHeading": true
-                  }
-                ]
-              },
-              {
-                "sectionName": "PropertiesInDubai",
-                "start": 688,
-                "end": 864,
-                "xmlHeading": true,
-                "children": [
-                  {
-                    "sectionName": "D G 1",
-                    "start": 689,
-                    "end": 752,
-                    "xmlHeading": true
-                  },
-                  {
-                    "sectionName": "UrbanOasis",
-                    "start": 754,
-                    "end": 802,
-                    "xmlHeading": true
-                  },
-                  {
-                    "sectionName": "DaVinciTowerByPagani",
-                    "start": 803,
-                    "end": 863,
-                    "xmlHeading": true
-                  }
-                ]
-              },
-              {
-                "sectionName": "PropertiesInRasAlKhaima",
-                "start": 865,
-                "end": 918,
-                "xmlHeading": true,
-                "children": [
-                  {
-                    "sectionName": "TheAstera",
-                    "start": 866,
-                    "end": 917,
-                    "xmlHeading": true
-                  }
-                ]
-              },
-              {
-                "sectionName": "PropertiesInSpain",
-                "start": 920,
-                "end": 994,
-                "xmlHeading": true,
-                "children": [
-                  {
-                    "sectionName": "Marea",
-                    "start": 921,
-                    "end": 963,
-                    "xmlHeading": true
-                  },
-                  {
-                    "sectionName": "TierraViva",
-                    "start": 965,
-                    "end": 993,
-                    "xmlHeading": true
-                  }
-                ]
+                "sectionName": "ProblemSolvingApproach",
+                "start": 31,
+                "end": 36,
+                "xmlHeading": false
               }
             ]
+          },
+          {
+            "sectionName": "ResponseFramework",
+            "start": 38,
+            "end": 60,
+            "xmlHeading": false,
+            "children": [
+              {
+                "sectionName": "InitialGreeting",
+                "start": 40,
+                "end": 41,
+                "xmlHeading": false
+              },
+              {
+                "sectionName": "HandlingUncertainty",
+                "start": 43,
+                "end": 49,
+                "xmlHeading": false
+              },
+              {
+                "sectionName": "EscalationCriteria",
+                "start": 51,
+                "end": 59,
+                "xmlHeading": false
+              }
+            ]
+          },
+          {
+            "sectionName": "KnowledgeBaseCategories",
+            "start": 61,
+            "end": 92,
+            "xmlHeading": false,
+            "children": [
+              {
+                "sectionName": "ProductSupport",
+                "start": 63,
+                "end": 69,
+                "xmlHeading": false
+              },
+              {
+                "sectionName": "OrderManagement",
+                "start": 71,
+                "end": 77,
+                "xmlHeading": false
+              },
+              {
+                "sectionName": "AccountManagement",
+                "start": 79,
+                "end": 84,
+                "xmlHeading": false
+              },
+              {
+                "sectionName": "PaymentProcessing",
+                "start": 86,
+                "end": 91,
+                "xmlHeading": false
+              }
+            ]
+          },
+          {
+            "sectionName": "ErrorHandling",
+            "start": 93,
+            "end": 103,
+            "xmlHeading": false,
+            "children": [
+              {
+                "sectionName": "WhenInformationIsMissing",
+                "start": 95,
+                "end": 96,
+                "xmlHeading": false
+              },
+              {
+                "sectionName": "WhenOutsideScope",
+                "start": 98,
+                "end": 99,
+                "xmlHeading": false
+              },
+              {
+                "sectionName": "WhenMultipleIssuesPresent",
+                "start": 101,
+                "end": 102,
+                "xmlHeading": false
+              }
+            ]
+          },
+          {
+            "sectionName": "FollowupProtocol",
+            "start": 104,
+            "end": 109,
+            "xmlHeading": false
+          },
+          {
+            "sectionName": "SuccessMetrics",
+            "start": 111,
+            "end": 116,
+            "xmlHeading": false
+          },
+          {
+            "sectionName": "ExampleScenariosAndResponses",
+            "start": 118,
+            "end": 138,
+            "xmlHeading": false,
+            "children": [
+              {
+                "sectionName": "Scenario1OrderStatusInquiry",
+                "start": 120,
+                "end": 122,
+                "xmlHeading": false
+              },
+              {
+                "sectionName": "Scenario2TechnicalIssue",
+                "start": 124,
+                "end": 130,
+                "xmlHeading": false
+              },
+              {
+                "sectionName": "Scenario3RefundRequest",
+                "start": 132,
+                "end": 138,
+                "xmlHeading": false
+              }
+            ]
+          },
+          {
+            "sectionName": "SafetyAndPrivacyGuidelines",
+            "start": 140,
+            "end": 145,
+            "xmlHeading": false
           }
         ]
-      },
-      {
-        "sectionName": "CallObjectiveRestatement",
-        "start": 998,
-        "end": 1005,
-        "xmlHeading": true
-      },
-      {
-        "sectionName": "PronunciationRulesRestatement",
-        "start": 1007,
-        "end": 1011,
-        "xmlHeading": true
-      },
-      {
-        "sectionName": "CallFlowRestatement",
-        "start": 1013,
-        "end": 1049,
-        "xmlHeading": true
-      },
-      {
-        "sectionName": "GoalCompletedRestatement",
-        "start": 1051,
-        "end": 1055,
-        "xmlHeading": true
       }
     ]
   }
