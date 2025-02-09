@@ -61,3 +61,8 @@ It also fails when giving info blandly like I dont want it to ask about target m
 5. Need to add feature to re-optimize prompt with additional feedback.
 
 Goal of MVP is to check if there is a need for an AI prompt engineer in the voice agents vertical and also if it is technically possible to build one with good quality.
+
+### Next Steps:
+
+- Move feedback to the right and ogPrompt to the left
+- Give additional rules to write better changes to apply-changes (maybe add ogPrompt as context)

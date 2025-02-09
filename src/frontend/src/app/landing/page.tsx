@@ -15,29 +15,29 @@ const diffViewerTheme = {
       removedColor: "#24292f",
       wordAddedBackground: "#abf2bc",
       wordRemovedBackground: "#fdb8c0",
-    }
+    },
   },
   diffContainer: {
-    maxHeight: '400px',
-    overflow: 'auto',
-    fontSize: '13px',
+    maxHeight: "400px",
+    overflow: "auto",
+    fontSize: "13px",
   },
   splitView: {
-    padding: '5px 10px',
+    padding: "5px 10px",
   },
   line: {
-    padding: '2px 0',
+    padding: "2px 0",
   },
   lineNumber: {
-    padding: '0 5px',
-    minWidth: '30px',
-    fontSize: '12px',
+    padding: "0 5px",
+    minWidth: "30px",
+    fontSize: "12px",
   },
   titleBlock: {
-    padding: '10px',
-    background: '#f1f3f4',
-    borderBottom: '1px solid #ddd',
-  }
+    padding: "10px",
+    background: "#f1f3f4",
+    borderBottom: "1px solid #ddd",
+  },
 };
 
 interface LogMessage {
@@ -218,7 +218,6 @@ export default function LandingPage() {
     prompt: string,
     indexTree: string
   ) => {
-    addMessage("Applying changes...", "info");
     addMessage(`Applying Change: ${solution.sectionToEdit}`, "info");
     const response = await fetch(`${BACKEND_URL}/api/apply-changes`, {
       method: "POST",
@@ -287,15 +286,20 @@ export default function LandingPage() {
       console.log("[handleModify] Applying changes...");
       let currentPromptVersion = currentPrompt;
       let currentIndexTreeVersion = indexTree;
-      
+
+      addMessage("Applying changes...", "info");
+
       for (const solution of solutionList) {
+        // Log the section being edited
+
         const result = await applyChanges(
           solution,
           currentPromptVersion,
           currentIndexTreeVersion
         );
         currentPromptVersion = result.updatedPrompt;
-        currentIndexTreeVersion = result.updatedIndexTree || currentIndexTreeVersion;
+        currentIndexTreeVersion =
+          result.updatedIndexTree || currentIndexTreeVersion;
       }
 
       setNewPrompt(currentPromptVersion);
@@ -347,22 +351,22 @@ export default function LandingPage() {
 
             <div className="grid md:grid-cols-2 gap-6">
               <div>
-                <label className="font-medium mb-2 block">Feedback</label>
-                <textarea
-                  className="textarea textarea-bordered w-full h-40"
-                  placeholder="Enter feedback about the AI agent..."
-                  value={feedback}
-                  onChange={(e) => setFeedback(e.target.value)}
-                  disabled={isProcessing}
-                />
-              </div>
-              <div>
                 <label className="font-medium mb-2 block">Current Prompt</label>
                 <textarea
                   className="textarea textarea-bordered w-full h-40"
                   placeholder="Paste the current prompt..."
                   value={currentPrompt}
                   onChange={(e) => setCurrentPrompt(e.target.value)}
+                  disabled={isProcessing}
+                />
+              </div>
+              <div>
+                <label className="font-medium mb-2 block">Feedback</label>
+                <textarea
+                  className="textarea textarea-bordered w-full h-40"
+                  placeholder="Enter feedback about the AI agent..."
+                  value={feedback}
+                  onChange={(e) => setFeedback(e.target.value)}
                   disabled={isProcessing}
                 />
               </div>
@@ -473,10 +477,17 @@ export default function LandingPage() {
               <div className="space-y-6">
                 <div className="bg-white rounded-lg overflow-hidden shadow-sm">
                   <div className="sticky top-0 z-10 bg-gray-50 border-b border-gray-200 p-3 flex justify-between items-center">
-                    <div className="text-sm font-medium text-gray-500">Original Prompt</div>
-                    <div className="text-sm font-medium text-gray-500">Modified Prompt</div>
+                    <div className="text-sm font-medium text-gray-500">
+                      Original Prompt
+                    </div>
+                    <div className="text-sm font-medium text-gray-500">
+                      Modified Prompt
+                    </div>
                   </div>
-                  <div className="relative" style={{ height: '400px', overflow: 'auto' }}>
+                  <div
+                    className="relative"
+                    style={{ height: "400px", overflow: "auto" }}
+                  >
                     <ReactDiffViewer
                       oldValue={currentPrompt}
                       newValue={newPrompt}
@@ -486,9 +497,7 @@ export default function LandingPage() {
                       showDiffOnly={false}
                       styles={diffViewerTheme}
                       extraLinesSurroundingDiff={3}
-                      codeFoldMessageRenderer={() => (
-                        <span></span>
-                      )}
+                      codeFoldMessageRenderer={() => <span></span>}
                     />
                   </div>
                 </div>
