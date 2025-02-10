@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import ReactDiffViewer from "react-diff-viewer-continued";
 
 // Custom theme for the diff viewer
@@ -59,6 +59,8 @@ interface Solution {
 const BACKEND_URL =
   process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
 
+console.log("[Config] Backend URL:", BACKEND_URL);
+
 export default function LandingPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [feedback, setFeedback] = useState("");
@@ -69,8 +71,11 @@ export default function LandingPage() {
   const [messages, setMessages] = useState<LogMessage[]>([]);
   const [abortController, setAbortController] =
     useState<AbortController | null>(null);
+  const currentOperationIdRef = useRef<string | null>(null);
 
   const addMessage = (message: string, type: LogMessage["type"] = "info") => {
+    // Only check currentOperationId during processing, not when starting
+    if (isProcessing && !currentOperationIdRef.current) return;
     setMessages((prev) => [
       ...prev,
       {
@@ -91,27 +96,56 @@ export default function LandingPage() {
     }
   };
 
-  const createIndexTree = async (prompt: string, feedback: string) => {
-    addMessage("Creating index tree...", "info");
-    const response = await fetch(`${BACKEND_URL}/api/create-index-tree`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt, feedback }),
-      signal: abortController?.signal,
-    });
+  const createIndexTree = async (
+    prompt: string,
+    feedback: string,
+    opId: string
+  ) => {
+    try {
+      console.log("[createIndexTree] Checking operation IDs:", {
+        opId,
+        currentOperationId: currentOperationIdRef.current,
+        match: opId === currentOperationIdRef.current,
+      });
+      if (opId !== currentOperationIdRef.current) {
+        console.log("[createIndexTree] Operation ID mismatch, returning null");
+        return null;
+      }
+      addMessage("Creating index tree...", "info");
+      console.log("[createIndexTree] Making API call with:", {
+        prompt,
+        feedback,
+        backendUrl: BACKEND_URL,
+      });
+      const url = `${BACKEND_URL}/api/create-index-tree`;
+      console.log("[createIndexTree] Full URL:", url);
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt, feedback }),
+        signal: abortController?.signal,
+      });
+      console.log("[createIndexTree] API response status:", response.status);
 
-    const result = await response.json();
-    if (!result.success)
-      throw new Error(result.error || "Failed to create index tree");
+      const result = await response.json();
+      console.log("[createIndexTree] API response:", result);
+      if (!result.success)
+        throw new Error(result.error || "Failed to create index tree");
 
-    return result.data.indexTree;
+      return result.data.indexTree;
+    } catch (error) {
+      console.error("[createIndexTree] Error during API call:", error);
+      throw error;
+    }
   };
 
   const createProblemList = async (
     indexTree: string,
     prompt: string,
-    feedback: string
+    feedback: string,
+    opId: string
   ) => {
+    if (opId !== currentOperationIdRef.current) return null;
     addMessage("Analyzing problems...", "info");
     console.log("[createProblemList] Starting with:", {
       indexTreeLength: indexTree?.length,
@@ -169,8 +203,10 @@ export default function LandingPage() {
   const createSolutionList = async (
     problemList: Problem[],
     prompt: string,
-    feedback: string
+    feedback: string,
+    opId: string
   ) => {
+    if (opId !== currentOperationIdRef.current) return null;
     addMessage("Generating solutions...", "info");
     console.log("[createSolutionList] Starting with:", {
       planLength: problemList.length,
@@ -216,8 +252,10 @@ export default function LandingPage() {
   const applyChanges = async (
     solution: Solution,
     prompt: string,
-    indexTree: string
+    indexTree: string,
+    opId: string
   ) => {
+    if (opId !== currentOperationIdRef.current) return null;
     addMessage(`Applying Change: ${solution.sectionToEdit}`, "info");
     const response = await fetch(`${BACKEND_URL}/api/apply-changes`, {
       method: "POST",
@@ -238,6 +276,10 @@ export default function LandingPage() {
   };
 
   const handleModify = async () => {
+    console.log("[handleModify] Button clicked");
+    const operationId = Date.now().toString();
+    console.log("[handleModify] Setting operation ID:", operationId);
+    currentOperationIdRef.current = operationId;
     setIsProcessing(true);
     setHasResults(false);
     setMessages([]);
@@ -246,11 +288,28 @@ export default function LandingPage() {
     setAbortController(controller);
 
     try {
+      if (!currentPrompt.trim() || !feedback.trim()) {
+        throw new Error("Current prompt and feedback are required");
+      }
       console.log("[handleModify] Starting modification process");
 
       // Step 1: Create index tree
       console.log("[handleModify] Creating index tree...");
-      const indexTree = await createIndexTree(currentPrompt, feedback);
+      console.log("[handleModify] Calling createIndexTree with:", {
+        promptLength: currentPrompt.length,
+        feedbackLength: feedback.length,
+        operationId,
+      });
+      const indexTree = await createIndexTree(
+        currentPrompt,
+        feedback,
+        operationId
+      );
+      if (!indexTree) {
+        console.log("[handleModify] createIndexTree returned null");
+        setIsProcessing(false);
+        return;
+      }
       console.log("[handleModify] Index tree created:", {
         indexTreeLength: indexTree.length,
       });
@@ -261,8 +320,10 @@ export default function LandingPage() {
       const problemList = await createProblemList(
         indexTree,
         currentPrompt,
-        feedback
+        feedback,
+        operationId
       );
+      if (!problemList) return;
       console.log("[handleModify] Problem list created:", {
         problemCount: problemList.length,
         problems: problemList,
@@ -274,8 +335,10 @@ export default function LandingPage() {
       const solutionList = await createSolutionList(
         problemList,
         currentPrompt,
-        feedback
+        feedback,
+        operationId
       );
+      if (!solutionList) return;
       console.log("[handleModify] Solution list created:", {
         solutionCount: solutionList?.length,
         solutions: solutionList,
@@ -295,8 +358,10 @@ export default function LandingPage() {
         const result = await applyChanges(
           solution,
           currentPromptVersion,
-          currentIndexTreeVersion
+          currentIndexTreeVersion,
+          operationId
         );
+        if (!result) return;
         currentPromptVersion = result.updatedPrompt;
         currentIndexTreeVersion =
           result.updatedIndexTree || currentIndexTreeVersion;
@@ -307,12 +372,12 @@ export default function LandingPage() {
       setHasResults(true);
       addMessage("Successfully updated the prompt!", "success");
     } catch (error) {
+      console.error("[handleModify] Error in modification process:", error);
       if (error instanceof Error) {
         addMessage(error.message, "error");
       } else {
         addMessage("An unexpected error occurred", "error");
       }
-      console.error("Error in modification process:", error);
     } finally {
       setIsProcessing(false);
       setAbortController(null);
@@ -320,6 +385,7 @@ export default function LandingPage() {
   };
 
   const handleCancel = () => {
+    currentOperationIdRef.current = null;
     if (abortController) {
       abortController.abort();
       setAbortController(null);
@@ -332,28 +398,33 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-base-100 p-8">
-      <div className="flex items-center gap-3 mb-8">
-        <div className="text-4xl">🐰</div>
-        <h1 className="text-3xl font-bold">Debug Bunny</h1>
+    <div className="min-h-screen bg-base-100 p-6">
+      <div className="flex flex-col items-center text-center gap-2 mb-8">
+        <div className="flex items-center gap-3">
+          <div className="text-4xl">🐰</div>
+          <h1 className="text-3xl font-bold">Debug Bunny</h1>
+        </div>
+        <p className="text-sm text-slate-600">Your AI prompt engineer</p>
       </div>
 
-      <div className="max-w-5xl mx-auto space-y-6">
+      <div className="max-w-5xl mx-auto space-y-4">
         {/* Step 1: Input */}
         <div className="card bg-base-100 shadow-xl">
-          <div className="card-body">
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-semibold">
+          <div className="card-body p-5">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-semibold text-sm">
                 1
               </div>
-              <h2 className="text-2xl font-bold">Input Feedback & Prompt</h2>
+              <h2 className="text-xl font-bold">Upload Inputs</h2>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="space-y-3">
               <div>
-                <label className="font-medium mb-2 block">Current Prompt</label>
+                <label className="text-slate-600 font-semibold mb-1 pl-1 text-base inline-block">
+                  Current Agent Prompt
+                </label>
                 <textarea
-                  className="textarea textarea-bordered w-full h-40"
+                  className="textarea textarea-bordered w-full h-32 text-sm"
                   placeholder="Paste the current prompt..."
                   value={currentPrompt}
                   onChange={(e) => setCurrentPrompt(e.target.value)}
@@ -361,9 +432,11 @@ export default function LandingPage() {
                 />
               </div>
               <div>
-                <label className="font-medium mb-2 block">Feedback</label>
+                <label className="text-slate-600 font-semibold mb-1 pl-1 text-base inline-block">
+                  Feedback
+                </label>
                 <textarea
-                  className="textarea textarea-bordered w-full h-40"
+                  className="textarea textarea-bordered w-full h-16 text-sm"
                   placeholder="Enter feedback about the AI agent..."
                   value={feedback}
                   onChange={(e) => setFeedback(e.target.value)}
@@ -375,7 +448,9 @@ export default function LandingPage() {
               <button
                 className="btn btn-primary"
                 onClick={handleModify}
-                disabled={!feedback.trim() || !currentPrompt.trim()}
+                disabled={
+                  !feedback.trim() || !currentPrompt.trim() || isProcessing
+                }
               >
                 Modify Agent
               </button>
@@ -394,51 +469,54 @@ export default function LandingPage() {
             </div>
 
             <div className="bg-primary/10 rounded-xl p-8 flex flex-col items-center justify-center gap-4">
-              {isProcessing && (
-                <div className="flex items-center gap-4">
-                  <div className="loading loading-spinner loading-md text-primary"></div>
-                  <p className="text-primary text-lg">Magic in progress...</p>
-                </div>
-              )}
-              {messages.length > 0 && (
-                <div className="w-full max-h-48 overflow-y-auto mt-4 space-y-2">
-                  {messages.map((msg, index) => (
-                    <div
-                      key={index}
-                      className={`text-sm flex items-start gap-2 ${
-                        msg.type === "error"
-                          ? "text-error"
-                          : msg.type === "success"
-                          ? "text-success"
-                          : msg.type === "warning"
-                          ? "text-warning"
-                          : "text-primary"
-                      }`}
-                    >
-                      <span className="opacity-50 text-xs">
-                        {msg.timestamp}
-                      </span>
-                      <span>{msg.message}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {isProcessing && (
-                <button
-                  className="btn btn-ghost btn-sm mt-4"
-                  onClick={handleCancel}
-                >
-                  Cancel
-                </button>
-              )}
-            </div>
-            {!isProcessing && !messages.length && (
-              <div className="bg-base-200 rounded-xl p-8 flex items-center justify-center">
-                <p className="text-base-content/70">
+              {!isProcessing && !messages.length ? (
+                <p className="text-primary">
                   Click &apos;Modify Agent&apos; to start the process
                 </p>
-              </div>
-            )}
+              ) : (
+                <>
+                  {isProcessing && (
+                    <div className="flex items-center gap-4">
+                      <div className="loading loading-spinner loading-md text-primary"></div>
+                      <p className="text-primary text-lg">
+                        Magic in progress...
+                      </p>
+                    </div>
+                  )}
+                  {messages.length > 0 && (
+                    <div className="w-full max-h-48 overflow-y-auto mt-4 space-y-2">
+                      {messages.map((msg, index) => (
+                        <div
+                          key={index}
+                          className={`text-sm flex items-start gap-2 ${
+                            msg.type === "error"
+                              ? "text-error"
+                              : msg.type === "success"
+                              ? "text-success"
+                              : msg.type === "warning"
+                              ? "text-warning"
+                              : "text-primary"
+                          }`}
+                        >
+                          <span className="opacity-50 text-xs">
+                            {msg.timestamp}
+                          </span>
+                          <span>{msg.message}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {isProcessing && (
+                    <button
+                      className="btn btn-ghost btn-sm mt-4"
+                      onClick={handleCancel}
+                    >
+                      Cancel
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         </div>
 

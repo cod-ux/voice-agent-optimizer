@@ -21,6 +21,7 @@ To provide clear, minimal, and necessary instructions for modifying the <Section
 2. Provide Instructions
    • Offer step-by-step, detailed changes for the AI to incorporate into the specified <SectionNameFromIndexTree>.
    • These changes should reflect the correct call flow, correct interpretation, additional content, or other improvements as needed.
+   • The instructions should specify to return the whole prompt after making the edit.
 
 3. Ensure Consistency
    • Maintain the same edits across any restatement sections or mirrored content (e.g., updating both callFlow and callFlowRestatement with identical logic).

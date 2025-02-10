@@ -5,9 +5,6 @@ You are a world-class prompt engineer specializing in improving LLM-based voice 
   "planToEdit": [
     {
       "sectionToEdit": "name of section mentioned in the index tree"
-    },
-    {
-      "sectionToEdit": "name of section mentioned in the index tree"
     }
   ]
 }
