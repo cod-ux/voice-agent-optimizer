@@ -399,12 +399,12 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-base-100 p-6">
-      <div className="flex flex-col items-center text-center gap-2 mb-8">
+      <div className="flex flex-col items-center text-center gap-2 mt-8 mb-8">
         <div className="flex items-center gap-3">
-          <div className="text-4xl">🐰</div>
+          <div className="text-3xl">🐰</div>
           <h1 className="text-3xl font-bold">Debug Bunny</h1>
         </div>
-        <p className="text-sm text-slate-600">Your AI prompt engineer</p>
+        <p className="text-base text-slate-600">(Your AI prompt engineer)</p>
       </div>
 
       <div className="max-w-5xl mx-auto space-y-4">
@@ -437,7 +437,7 @@ export default function LandingPage() {
                 </label>
                 <textarea
                   className="textarea textarea-bordered w-full h-16 text-sm"
-                  placeholder="Enter feedback about the AI agent..."
+                  placeholder="e.g., 'The agent should ask for the customer's name before starting the call.'..."
                   value={feedback}
                   onChange={(e) => setFeedback(e.target.value)}
                   disabled={isProcessing}
@@ -460,15 +460,15 @@ export default function LandingPage() {
 
         {/* Step 2: Analysis */}
         <div className="card bg-base-100 shadow-xl">
-          <div className="card-body">
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-semibold">
+          <div className="card-body p-5">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-semibold text-sm">
                 2
               </div>
-              <h2 className="text-2xl font-bold">Analyzing & Fixing</h2>
+              <h2 className="text-xl font-bold">Analyzing & Fixing</h2>
             </div>
 
-            <div className="bg-primary/10 rounded-xl p-8 flex flex-col items-center justify-center gap-4">
+            <div className="bg-primary/10 rounded-xl p-5 flex flex-col items-center justify-center gap-3">
               {!isProcessing && !messages.length ? (
                 <p className="text-primary">
                   Click &apos;Modify Agent&apos; to start the process
@@ -478,7 +478,7 @@ export default function LandingPage() {
                   {isProcessing && (
                     <div className="flex items-center gap-4">
                       <div className="loading loading-spinner loading-md text-primary"></div>
-                      <p className="text-primary text-lg">
+                      <p className="text-primary text-sm">
                         Magic in progress...
                       </p>
                     </div>
@@ -522,13 +522,13 @@ export default function LandingPage() {
 
         {/* Step 3: Results */}
         <div className="card bg-base-100 shadow-xl">
-          <div className="card-body">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-semibold">
+          <div className="card-body p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-semibold text-sm">
                   3
                 </div>
-                <h2 className="text-2xl font-bold">Results</h2>
+                <h2 className="text-xl font-bold">Results</h2>
               </div>
               {hasResults && (
                 <button className="btn btn-primary gap-2" onClick={handleCopy}>
