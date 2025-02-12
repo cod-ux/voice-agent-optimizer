@@ -64,6 +64,7 @@ Goal of MVP is to check if there is a need for an AI prompt engineer in the voic
 
 ### Next Steps:
 
-- Add changeLog summary
+- Add changeLog - after every applyChange, save line plus and minus for each section
 - Split feedback into tasks
 - Give additional rules to write better changes to apply-changes (maybe add ogPrompt as context)
+- It needs context to make better changes. (done - added indexTree to give context to applyChanges)

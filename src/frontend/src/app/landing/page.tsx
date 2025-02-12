@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import ReactDiffViewer from "react-diff-viewer-continued";
+import { JsonNode } from "@backend/types";
 
 // Custom theme for the diff viewer
 const diffViewerTheme = {
@@ -61,14 +62,45 @@ const BACKEND_URL =
 
 console.log("[Config] Backend URL:", BACKEND_URL);
 
+// Utility function to find the section for a given line number in the index tree
+const findSectionForLine = (
+  lineNumber: number,
+  indexTree: JsonNode[]
+): string => {
+  // Search through each top-level section
+  for (const section of indexTree) {
+    if (lineNumber >= section.start && lineNumber <= section.end) {
+      // If this section matches, check children for more specific match
+      if (section.children) {
+        for (const child of section.children) {
+          const childSection = findSectionForLine(lineNumber, [child]);
+          if (childSection) {
+            return childSection;
+          }
+        }
+      }
+      // Return current section if no child matches or no children
+      return section.sectionName;
+    }
+  }
+
+  // Line number not found in any section
+  return "";
+};
+
 export default function LandingPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [feedback, setFeedback] = useState("");
   const [currentPrompt, setCurrentPrompt] = useState("");
   const [hasResults, setHasResults] = useState(false);
   const [newPrompt, setNewPrompt] = useState("");
-  const [changes, setChanges] = useState<string[]>([]);
+
   const [messages, setMessages] = useState<LogMessage[]>([]);
+  const [lineChanges, setLineChanges] = useState<{
+    removed: { line: string; number: number; isSection?: boolean }[];
+    added: { line: string; number: number; isSection?: boolean }[];
+  }>({ removed: [], added: [] });
+  const [indexTreeObj, setIndexTreeObj] = useState<JsonNode[] | null>(null);
   const [abortController, setAbortController] =
     useState<AbortController | null>(null);
   const currentOperationIdRef = useRef<string | null>(null);
@@ -368,8 +400,78 @@ export default function LandingPage() {
       }
 
       setNewPrompt(currentPromptVersion);
-      setChanges(solutionList.map((s: Solution) => s.changeInstructions));
+
       setHasResults(true);
+
+      // Parse the index tree and update state
+      const indexTreeObj = JSON.parse(indexTree) as JsonNode[];
+      setIndexTreeObj(indexTreeObj);
+
+      // Track line-by-line changes
+      const oldLines = currentPrompt.split("\n");
+      const newLines = currentPromptVersion.split("\n");
+
+      // Helper function to check if a line is empty or only whitespace
+      const isEmptyLine = (line: string) => line.trim() === "";
+
+      const changes = {
+        removed: [] as { line: string; number: number }[],
+        added: [] as { line: string; number: number }[],
+      };
+
+      // Find removed lines including empty lines between sections
+      let currentRemovedSection = "";
+      for (let i = 0; i < oldLines.length; i++) {
+        const line = oldLines[i];
+        if (!newLines.includes(line)) {
+          // If this is a non-empty line or if it's between two non-empty removed lines, add it
+          const prev =
+            changes.removed.length > 0
+              ? changes.removed[changes.removed.length - 1]
+              : null;
+
+          if (
+            !isEmptyLine(line) ||
+            (prev && i + 1 === prev?.number + 1) ||
+            (prev && i + 1 <= prev?.number + 2)
+          ) {
+            const section = findSectionForLine(i + 1, indexTreeObj);
+            if (section !== currentRemovedSection) {
+              currentRemovedSection = section;
+              currentRemovedSection = section;
+            }
+            changes.removed.push({ line, number: i + 1 });
+          }
+        }
+      }
+
+      // Find added lines including empty lines between sections
+      let currentAddedSection = "";
+      for (let i = 0; i < newLines.length; i++) {
+        const line = newLines[i];
+        if (!oldLines.includes(line)) {
+          // If this is a non-empty line or if it's between two non-empty added lines, add it
+          const prev =
+            changes.added.length > 0
+              ? changes.added[changes.added.length - 1]
+              : null;
+
+          if (
+            !isEmptyLine(line) ||
+            (prev && i + 1 === prev?.number + 1) ||
+            (prev && i + 1 <= prev?.number + 2)
+          ) {
+            const section = findSectionForLine(i + 1, indexTreeObj);
+            if (section !== currentAddedSection) {
+              currentAddedSection = section;
+              currentAddedSection = section;
+            }
+            changes.added.push({ line, number: i + 1 });
+          }
+        }
+      }
+
+      setLineChanges(changes);
       addMessage("Successfully updated the prompt!", "success");
     } catch (error) {
       console.error("[handleModify] Error in modification process:", error);
@@ -393,7 +495,7 @@ export default function LandingPage() {
     setIsProcessing(false);
     setHasResults(false);
     setNewPrompt("");
-    setChanges([]);
+    setLineChanges({ removed: [], added: [] });
     addMessage("Operation cancelled", "warning");
   };
 
@@ -404,7 +506,9 @@ export default function LandingPage() {
           <div className="text-3xl">🐰</div>
           <h1 className="text-3xl font-bold">Debug Bunny</h1>
         </div>
-        <p className="text-base text-slate-600">(Your AI prompt engineer)</p>
+        <p className="text-base text-slate-600">
+          Fix errors in your voice agents
+        </p>
       </div>
 
       <div className="max-w-5xl mx-auto space-y-4">
@@ -421,10 +525,10 @@ export default function LandingPage() {
             <div className="space-y-3">
               <div>
                 <label className="text-slate-600 font-semibold mb-1 pl-1 text-base inline-block">
-                  Current Agent Prompt
+                  Voice Agent Prompt
                 </label>
                 <textarea
-                  className="textarea textarea-bordered w-full h-32 text-sm"
+                  className="textarea textarea-bordered w-full h-36 text-sm"
                   placeholder="Paste the current prompt..."
                   value={currentPrompt}
                   onChange={(e) => setCurrentPrompt(e.target.value)}
@@ -436,7 +540,7 @@ export default function LandingPage() {
                   Feedback
                 </label>
                 <textarea
-                  className="textarea textarea-bordered w-full h-16 text-sm"
+                  className="textarea textarea-bordered w-full h-20 text-sm"
                   placeholder="e.g., 'The agent should ask for the customer's name before starting the call.'..."
                   value={feedback}
                   onChange={(e) => setFeedback(e.target.value)}
@@ -523,32 +627,11 @@ export default function LandingPage() {
         {/* Step 3: Results */}
         <div className="card bg-base-100 shadow-xl">
           <div className="card-body p-5">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-semibold text-sm">
-                  3
-                </div>
-                <h2 className="text-xl font-bold">Results</h2>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-semibold text-sm">
+                3
               </div>
-              {hasResults && (
-                <button className="btn btn-primary gap-2" onClick={handleCopy}>
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"
-                    />
-                  </svg>
-                  Copy New Prompt
-                </button>
-              )}
+              <h2 className="text-xl font-bold">Results</h2>
             </div>
 
             {hasResults ? (
@@ -564,7 +647,7 @@ export default function LandingPage() {
                   </div>
                   <div
                     className="relative"
-                    style={{ height: "400px", overflow: "auto" }}
+                    style={{ height: "450px", overflow: "auto" }}
                   >
                     <ReactDiffViewer
                       oldValue={currentPrompt}
@@ -579,13 +662,207 @@ export default function LandingPage() {
                     />
                   </div>
                 </div>
-                <div>
-                  <h3 className="font-medium mb-3">Summary of Changes:</h3>
-                  <ul className="list-disc list-inside space-y-2 text-gray-600">
-                    {changes.map((change, index) => (
-                      <li key={index}>{change}</li>
-                    ))}
-                  </ul>
+
+                <div className="flex justify-end mt-4 mb-8">
+                  <button
+                    className="btn btn-primary gap-2"
+                    onClick={handleCopy}
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"
+                      />
+                    </svg>
+                    Copy New Prompt
+                  </button>
+                </div>
+
+                <div className="divider my-0"></div>
+
+                {/* Line Changes Summary */}
+                <div className="bg-white rounded-lg overflow-hidden shadow-sm p-4 pt-2">
+                  <h3 className="text-xl font-bold mb-4">Summary of Changes</h3>
+                  <div className="space-y-4">
+                    {lineChanges.removed.length > 0 && (
+                      <div className="mb-4">
+                        <h4 className="text-sm text-red-600 font-medium mb-2">
+                          Removed Lines:
+                        </h4>
+                        {(() => {
+                          const groups: {
+                            start: number;
+                            lines: typeof lineChanges.removed;
+                          }[] = [];
+                          let currentGroup: typeof lineChanges.removed = [];
+
+                          lineChanges.removed.forEach((item, index) => {
+                            const prev =
+                              index > 0 ? lineChanges.removed[index - 1] : null;
+
+                            // Start a new group if:
+                            // 1. This is the first item
+                            // 2. This item is consecutive with the previous one
+                            // 3. This item is part of the same section (within 2 lines)
+                            if (
+                              index === 0 ||
+                              (prev && item.number === prev?.number + 1) ||
+                              (prev && item.number <= prev?.number + 2)
+                            ) {
+                              currentGroup.push(item);
+                            } else {
+                              if (currentGroup.length > 0) {
+                                groups.push({
+                                  start: currentGroup[0].number,
+                                  lines: [...currentGroup],
+                                });
+                              }
+                              currentGroup = [item];
+                            }
+                          });
+
+                          if (currentGroup.length > 0) {
+                            groups.push({
+                              start: currentGroup[0].number,
+                              lines: [...currentGroup],
+                            });
+                          }
+
+                          if (!indexTreeObj)
+                            throw new Error("Index tree not found");
+
+                          return groups.map((group, groupIndex) => {
+                            const section = findSectionForLine(
+                              group.start,
+                              indexTreeObj
+                            );
+
+                            return (
+                              <div key={groupIndex} className="mb-6">
+                                <div className="text-[15px] leading-relaxed text-gray-700 mb-2 flex items-center gap-1.5">
+                                  <span className="text-red-600 text-lg">
+                                    −
+                                  </span>
+                                  <span className="opacity-75">from</span>
+                                  <span className="font-semibold">
+                                    {section}
+                                  </span>
+                                </div>
+                                <div className="bg-red-50 rounded-md p-4">
+                                  <div className="text-[13px] text-gray-500 mb-2">
+                                    {group.lines.length === 1
+                                      ? `Line ${group.start}`
+                                      : `Lines ${group.start}-${
+                                          group.start + group.lines.length - 1
+                                        }`}
+                                  </div>
+                                  <div className="whitespace-pre-wrap font-mono text-[14px] leading-relaxed">
+                                    {group.lines
+                                      .filter((item) => !item.isSection)
+                                      .map((item) => item.line)
+                                      .join("\n")}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          });
+                        })()}
+                      </div>
+                    )}
+                    {lineChanges.added.length > 0 && (
+                      <div>
+                        <h4 className="text-[15px] text-gray-600 font-medium mb-4">
+                          Added Lines
+                        </h4>
+                        {(() => {
+                          const groups: {
+                            start: number;
+                            lines: typeof lineChanges.added;
+                          }[] = [];
+                          let currentGroup: typeof lineChanges.added = [];
+
+                          lineChanges.added.forEach((item, index) => {
+                            const prev =
+                              index > 0 ? lineChanges.added[index - 1] : null;
+
+                            // Start a new group if:
+                            // 1. This is the first item
+                            // 2. This item is consecutive with the previous one
+                            // 3. This item is part of the same section (within 2 lines)
+                            if (
+                              index === 0 ||
+                              (prev && item.number === prev?.number + 1) ||
+                              (prev && item.number <= prev?.number + 2)
+                            ) {
+                              currentGroup.push(item);
+                            } else {
+                              if (currentGroup.length > 0) {
+                                groups.push({
+                                  start: currentGroup[0].number,
+                                  lines: [...currentGroup],
+                                });
+                              }
+                              currentGroup = [item];
+                            }
+                          });
+
+                          if (currentGroup.length > 0) {
+                            groups.push({
+                              start: currentGroup[0].number,
+                              lines: [...currentGroup],
+                            });
+                          }
+
+                          if (!indexTreeObj)
+                            throw new Error("Index tree not found");
+
+                          return groups.map((group, groupIndex) => {
+                            const section = findSectionForLine(
+                              group.start,
+                              indexTreeObj
+                            );
+
+                            return (
+                              <div key={groupIndex} className="mb-6">
+                                <div className="text-[15px] leading-relaxed text-gray-700 mb-2 flex items-center gap-1.5">
+                                  <span className="text-green-600 text-lg">
+                                    +
+                                  </span>
+                                  <span className="opacity-75">to</span>
+                                  <span className="font-semibold">
+                                    {section}
+                                  </span>
+                                </div>
+                                <div className="bg-green-50 rounded-md p-4">
+                                  <div className="text-[13px] text-gray-500 mb-2">
+                                    {group.lines.length === 1
+                                      ? `Line ${group.start}`
+                                      : `Lines ${group.start}-${
+                                          group.start + group.lines.length - 1
+                                        }`}
+                                  </div>
+                                  <div className="whitespace-pre-wrap font-mono text-[14px] leading-relaxed">
+                                    {group.lines
+                                      .filter((item) => !item.isSection)
+                                      .map((item) => item.line)
+                                      .join("\n")}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          });
+                        })()}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             ) : (

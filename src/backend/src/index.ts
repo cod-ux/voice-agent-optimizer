@@ -170,6 +170,7 @@ async function createIndexTree(feedback: string, ogPrompt: string) {
     const indexTreeBuffer = await client.chat.completions.create({
       model: "gpt-4o",
       messages: [{ role: "user", content: filledCreateIndexTreePrompt }],
+      temperature: 0.6,
     });
 
     const indexTree = indexTreeBuffer.choices[0].message.content;
@@ -256,6 +257,7 @@ async function createProblemList(
       model: "gpt-4o",
       messages: [{ role: "user", content: filledCreateProblemListPrompt }],
       response_format: zodResponseFormat(problemListSchema, "problem_list"),
+      temperature: 0,
     });
 
     // Parse the JSON response
@@ -317,6 +319,7 @@ async function createSolutionList(
       model: "gpt-4o",
       messages: [{ role: "user", content: filledCreateSolutionListPrompt }],
       response_format: zodResponseFormat(solutionSchema, "solution_list"),
+      temperature: 0.3,
     });
 
     const response = changeBuffer.choices[0].message.parsed;
@@ -663,15 +666,15 @@ async function applyChange(
     const applyChangesPrompt = readFileSync(applyChangesPromptFilePath, "utf-8")
       .replace("{sectionToEdit}", change.sectionToEdit)
       .replace("{sectionContent}", sectionContent)
-      .replace("{changeInstructions}", change.changeInstructions);
+      .replace("{changeInstructions}", change.changeInstructions)
+      .replace("indexTree", currentIndexTree);
 
-    // Get the completion from OpenAI
     let completion;
     try {
       completion = await client.chat.completions.create({
         model: "gpt-4o",
         messages: [{ role: "user", content: applyChangesPrompt }],
-        temperature: 0,
+        temperature: 0.1,
       });
       if (!completion.choices[0].message.content) {
         throw new Error("OpenAI returned empty response");

@@ -21,4 +21,8 @@ Here is the section as it appears in the prompt:
 
 {sectionContent}
 
+Here is the structure of the original prompt:
+
+{indexTree}
+
 IMPORTANT NOTE: Do not return any sort of `xml` or any other wrappers around the content you return. Just return the edited content, while preserving existing formatting, including headings, XML tags, etc.
