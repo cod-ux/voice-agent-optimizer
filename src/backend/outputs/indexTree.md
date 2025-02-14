@@ -135,7 +135,7 @@
             ]
           },
           {
-            "sectionName": "FollowUpProtocol",
+            "sectionName": "FollowupProtocol",
             "start": 104,
             "end": 109,
             "xmlHeading": false
@@ -176,12 +176,6 @@
             "sectionName": "SafetyAndPrivacyGuidelines",
             "start": 140,
             "end": 145,
-            "xmlHeading": false
-          },
-          {
-            "sectionName": "CustomerServiceAssistantPromptCoreInstructions",
-            "start": 147,
-            "end": 147,
             "xmlHeading": false
           }
         ]

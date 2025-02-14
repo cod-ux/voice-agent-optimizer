@@ -503,11 +503,14 @@ export default function LandingPage() {
     <div className="min-h-screen bg-base-100 p-6">
       <div className="flex flex-col items-center text-center gap-2 mt-8 mb-8">
         <div className="flex items-center gap-3">
-          <div className="text-3xl">🐰</div>
-          <h1 className="text-3xl font-bold">Debug Bunny</h1>
+          <span role="img" aria-label="speech bubble">
+            💬
+          </span>
+
+          <h1 className="text-3xl font-bold">Whisper</h1>
         </div>
         <p className="text-base text-slate-600">
-          Fix errors in your voice agents
+          Fix your voice agents, faster
         </p>
       </div>
 
@@ -556,7 +559,7 @@ export default function LandingPage() {
                   !feedback.trim() || !currentPrompt.trim() || isProcessing
                 }
               >
-                Modify Agent
+                Run Task
               </button>
             </div>
           </div>
@@ -575,7 +578,7 @@ export default function LandingPage() {
             <div className="bg-primary/10 rounded-xl p-5 flex flex-col items-center justify-center gap-3">
               {!isProcessing && !messages.length ? (
                 <p className="text-primary">
-                  Click &apos;Modify Agent&apos; to start the process
+                  Click &apos;Run Task&apos; to start the process
                 </p>
               ) : (
                 <>
