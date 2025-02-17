@@ -1,5 +1,5 @@
 "use client";
-import Steps from "../../components/Steps";
+import Steps from "../../../components/Steps";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
@@ -22,39 +22,53 @@ export default function Feedback() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-12 max-w-4xl">
+    <div className="container mx-auto px-4 py-12 max-w-4xl" data-oid="3tr3c69">
       {/* Title */}
-      <h1 className="text-4xl font-bold text-center text-black mb-8">
+      <h1
+        className="text-4xl font-bold text-center text-black mb-8"
+        data-oid="4o73cgi"
+      >
         Optimise Voice Agents
       </h1>
 
       {/* Steps Component */}
-      <Steps currentStep={2} />
+      <Steps currentStep={2} data-oid=":i_64qe" />
 
       {/* Feedback Card */}
-      <div className="card bg-white shadow-md border border-gray-300 rounded-xl max-w-3xl mx-auto mb-6">
-        <div className="card-body p-3">
-          <h2 className="text-lg font-semibold mb-2">Your Feedback</h2>
+      <div
+        className="card bg-white shadow-md border border-gray-300 rounded-xl max-w-3xl mx-auto mb-6"
+        data-oid="t4:b5vq"
+      >
+        <div className="card-body p-3" data-oid="y.pm9iz">
+          <h2 className="text-lg font-semibold mb-2" data-oid="cl:oavh">
+            Your Feedback
+          </h2>
           <textarea
             className="textarea h-48 w-full resize-none bg-white text-black border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             placeholder="Enter your feedback here..."
             value={feedback}
             onChange={(e) => setFeedback(e.target.value)}
+            data-oid="bq23b2u"
           />
         </div>
       </div>
 
       {/* Navigation Buttons */}
-      <div className="flex justify-between mt-6 max-w-3xl mx-auto">
+      <div
+        className="flex justify-between mt-6 max-w-3xl mx-auto"
+        data-oid="jmgo1b2"
+      >
         <button
           className="btn btn-primary bg-blue-500 hover:bg-blue-600 text-white"
           onClick={() => router.push("/")}
+          data-oid="neho6a:"
         >
           Back
         </button>
         <button
           className="btn btn-primary bg-blue-500 hover:bg-blue-600 text-white"
           onClick={handleNext}
+          data-oid="yzpduzm"
         >
           Next
         </button>

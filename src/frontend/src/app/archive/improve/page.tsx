@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import Steps from "../../components/Steps";
-import TerminalLog, { LogMessage } from "../../components/TerminalLog";
+import Steps from "../../../components/Steps";
+import TerminalLog, { LogMessage } from "../../../components/TerminalLog";
 import { useRouter } from "next/navigation";
 import {
   validatePrompt,
@@ -9,7 +9,7 @@ import {
   validateIndexTree,
   validateProblemList,
   validateSolutionList,
-} from "../../utils/validation";
+} from "../../../utils/validation";
 
 interface ProblemItem {
   sectionToEdit: string;
@@ -246,8 +246,7 @@ export default function Results() {
         indexTreeLength: indexTree.length,
         feedbackLength: feedback.length,
       });
-
-      const response = await fetch(`${BACKEND_URL}/api/create-change-list`, {
+       const response = await fetch(`${BACKEND_URL}/api/create-change-list`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -258,45 +257,40 @@ export default function Results() {
           feedback,
         }),
       });
-
-      const result = await response.json();
+       const result = await response.json();
       console.log("[Change List] API response:", {
         success: result.success,
         error: result.error,
         hasChangeList: !!result.data?.changeList,
       });
-
-      if (!result.success) {
+       if (!result.success) {
         console.error("[Change List] Creation failed:", result.error);
         throw new Error(result.error || "Failed to create change list");
       }
-
-      const { changeList } = result.data;
+       const { changeList } = result.data;
       console.log("[Change List] Raw response:", changeList);
       console.log("[Change List] Response type:", typeof changeList);
       try {
         const changeListObj = JSON.parse(changeList);
         console.log("[Change List] Successfully parsed JSON:", changeListObj);
         const changeListArray = changeListObj.changeListArray;
-
-        console.log("[Change List] Parsed result:", {
+         console.log("[Change List] Parsed result:", {
           numberOfChanges: changeListArray.length,
           changes: changeListArray.map((c: ChangeItem) => ({
             section: c.sectionToEdit,
             instructionLength: c.changeInstructions.length,
           })),
         });
-
-        localStorage.setItem("changeList", JSON.stringify(changeListArray));
+         localStorage.setItem("changeList", JSON.stringify(changeListArray));
         addMessage("Successfully created change list!", "success");
-
-        return changeListArray;
+         return changeListArray;
       } catch (error) {
         console.error("[Change List] Failed to parse JSON:", error);
         throw new Error("Failed to parse change list JSON");
       }
     };
-*/
+    */
+
     const applyChanges = async (changeList: SolutionItem[]) => {
       console.log("[Apply Changes] Starting with:", {
         totalChanges: changeList.length,
@@ -360,9 +354,10 @@ export default function Results() {
           });
 
           if (!result.success) {
-            const errorMsg = `Failed to apply changes to section: ${change.sectionToEdit} - ${
-              result.error || "Unknown error"
-            }`;
+            const errorMsg = `Failed to apply changes to section: ${
+              change.sectionToEdit
+            } - ${result.error || "Unknown error"}`;
+
             console.error("[Apply Changes] Error:", {
               section: change.sectionToEdit,
               error: result.error,
@@ -455,6 +450,7 @@ export default function Results() {
             `Error in optimization process: ${
               error instanceof Error ? error.message : "Unknown error"
             }`,
+
             "error"
           );
         }
@@ -479,23 +475,26 @@ export default function Results() {
   }, [isStarted, navigateToResults, navigateWithDelay]); // Run when isStarted changes
 
   return (
-    <div className="container mx-auto px-4 py-12 max-w-4xl">
+    <div className="container mx-auto px-4 py-12 max-w-4xl" data-oid="-x3bbq-">
       {/* Title */}
-      <h1 className="text-4xl font-bold text-center text-black mb-8">
+      <h1
+        className="text-4xl font-bold text-center text-black mb-8"
+        data-oid="rl9ygv6"
+      >
         Optimise Voice Agents
       </h1>
 
       {/* Steps Component */}
-      <Steps currentStep={3} />
+      <Steps currentStep={3} data-oid="pw3n08e" />
 
       {/* Terminal Component */}
-      <div className="my-8">
-        <TerminalLog messages={messages} />
+      <div className="my-8" data-oid="ogvnfa4">
+        <TerminalLog messages={messages} data-oid="h23f4fq" />
       </div>
 
       {/* Buttons */}
-      <div className="flex justify-between mt-8">
-        <a href="/feedback" className="btn btn-outline">
+      <div className="flex justify-between mt-8" data-oid="1oo-jzt">
+        <a href="/feedback" className="btn btn-outline" data-oid="l2upd40">
           Back to Feedback
         </a>
 
@@ -505,6 +504,7 @@ export default function Results() {
           className={`btn ${
             isProcessing || isStarted ? "btn-disabled" : "btn-primary"
           }`}
+          data-oid="8yigwd-"
         >
           {isProcessing ? "Processing..." : "Start Optimization"}
         </button>
